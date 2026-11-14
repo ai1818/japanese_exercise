@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>生活场景练习</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-title" content="口语私教台">
+<style>
+  :root {
+    --bg: #0f172a; --panel: #1e293b; --panel2: #0b1120; --border: #334155;
+    --text: #f1f5f9; --muted: #94a3b8; --accent: #38bdf8;
+    --success: #34d399; --warning: #fbbf24; --danger: #f87171;
+    --npc: #1e3a5f; --me: #14532d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", "Meiryo", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6; padding: 14px 16px 30px;
+  }
+  header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 14px; }
+  h1 { font-size: 1.15rem; }
+  .sub { font-size: 0.8rem; color: var(--muted); }
+  .nav { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  a.btn, button { font: inherit; font-size: 0.85rem; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--text); padding: 6px 12px; cursor: pointer; text-decoration: none; }
+  button.primary { background: #2563eb; border-color: #3b82f6; font-weight: 600; }
+  button:disabled { opacity: 0.5; cursor: wait; }
+  .small { padding: 2px 8px; font-size: 0.76rem; }
+  select, textarea, input { font: inherit; font-size: 0.88rem; background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+  .layout { display: grid; grid-template-columns: 250px 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; min-width: 0; }
+  .cat { font-size: 0.74rem; color: var(--muted); margin: 10px 0 4px; }
+  .cat:first-child { margin-top: 0; }
+  .sitem { padding: 7px 8px; border-radius: 6px; cursor: pointer; font-size: 0.86rem; border: 1px solid transparent; }
+  .sitem:hover { background: var(--panel2); }
+  .sitem.active { background: var(--panel2); border-color: var(--accent); }
+  .title { font-size: 1.02rem; font-weight: 700; display: inline; margin-right: 8px; }
+  .setting { font-size: 0.8rem; color: #cbd5e1; display: inline; }
+  .tasks { font-size: 0.78rem; background: var(--panel2); border-radius: 6px; padding: 4px 8px; margin-top: 5px; color: #cbd5e1; }
+  .tabs { display: flex; gap: 6px; margin: 8px 0 8px; flex-wrap: wrap; }
+  .tab { border-radius: 99px; padding: 3px 12px; font-size: 0.82rem; }
+  .tab.on { background: #1e3a8a; border-color: var(--accent); font-weight: 700; }
+  .tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; align-items: center; }
+  .ptitle { font-weight: 700; margin: 10px 0 5px; color: var(--accent); display: flex; gap: 8px; align-items: center; font-size: 0.92rem; }
+  .line { display: flex; gap: 8px; margin-bottom: 6px; align-items: flex-start; }
+  .line.me { flex-direction: row-reverse; }
+  .who { flex-shrink: 0; font-size: 1.1rem; margin-top: 4px; }
+  .bubble { max-width: 82%; border-radius: 10px; padding: 7px 11px; background: var(--npc); }
+  .line.me .bubble { background: var(--me); }
+  .bubble .jp { font-size: 1rem; }
+  .bubble .cn { font-size: 0.8rem; color: var(--muted); }
+  .bubble.playing { outline: 2px solid var(--warning); }
+  .masked .jp { filter: blur(6px); cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  th, td { border-bottom: 1px solid var(--border); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.78rem; }
+  .flash { background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; padding: 18px; text-align: center; }
+  .flash .q { font-size: 1.1rem; }
+  .flash .a { font-size: 1.2rem; margin-top: 10px; color: var(--success); min-height: 1.6em; }
+  .box { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; font-size: 0.86rem; }
+  .box h3 { font-size: 0.82rem; color: var(--muted); margin-bottom: 6px; }
+  .chat { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; }
+  .fb { font-size: 0.8rem; margin: -2px 0 8px auto; max-width: 82%; background: var(--panel2); border-radius: 8px; padding: 5px 9px; border: 1px solid var(--border); }
+  .fb .ok { color: var(--success); } .bad { color: #fca5a5; } .good { color: #6ee7b7; font-weight: 600; } .why { color: #cbd5e1; }
+  .curve { font-size: 0.74rem; color: var(--warning); margin: 0 0 4px 34px; }
+  .row { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+  .row textarea { flex: 1; min-width: 200px; height: 56px; resize: vertical; }
+  .mic { background: #dc2626; border-color: #ef4444; font-weight: 700; min-width: 128px; }
+  .mic.rec { background: #991b1b; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,.6); } 70% { box-shadow: 0 0 0 12px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }
+  .err { background: #450a0a; border: 1px solid var(--danger); color: #fecaca; border-radius: 8px; padding: 10px 12px; font-size: 0.84rem; white-space: pre-wrap; margin: 8px 0; }
+  .loading { color: var(--muted); font-size: 0.86rem; padding: 6px 0; }
+  .chip { display: inline-block; border-radius: 99px; padding: 0 8px; font-size: 0.76rem; border: 1px solid; margin: 0 4px 4px 0; }
+  .done { background: #064e3b; border: 1px solid var(--success); color: #d1fae5; border-radius: 8px; padding: 10px 12px; margin: 8px 0; }
+  .empty { color: var(--muted); padding: 30px 0; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🗣 生活场景 · 先看先听，再上场对练</h1>
+    <div class="sub">卡片内容是事先写好的（不用 Gemini）；只有「🎭 角色扮演」时 Gemini 才实时扮演对方、批改你说的话。</div>
+  </div>
+  <div class="nav">
+    <select id="voiceMode" title="真人神经网络音色（微软 Edge Neural TTS，不消耗 Gemini）">
+      <option value="auto" selected>🎭 自动分角色真音（女 Nanami / 男 Keita）</option>
+      <option value="nanami">👩 自然女声（Nanami）</option>
+      <option value="keita">👨 自然男声（Keita）</option>
+    </select>
+    <select id="speed" title="朗读语速">
+      <option value="0.75">语速 0.75x</option>
+      <option value="0.9" selected>语速 0.9x</option>
+      <option value="1.0">语速 1.0x</option>
+      <option value="1.15">语速 1.15x（接近真实）</option>
+    </select>
+    <button class="small" onclick="stopAllAudio()" title="立即中断当前正在播放的语音">⏹ 停止播放</button>
+    <a class="btn" href="/bank">📚 面试题库</a>
+    <a class="btn" href="/progress" target="_blank">📈 进步页</a>
+    <a class="btn" href="/">← 回练习台</a>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="card" id="slist"><div class="loading">读取场景...</div></div>
+  <div class="card" id="main"><div class="empty">← 选一个场景</div></div>
+</div>
+
+<script>
+let SCENES = [], CUR = null, TAB = 'dialog', PART_STATS = {};
+const SURPRISE_AFTER = 2;  // 一段对话「任务完成」满几次后自动开启意外情况
+let RP = null, RP_CN = false;  // 角色扮演的状态 / 是否显示对方的中文
+let rec = null, chunks = [], recording = false, lastPayload = null;
+const ttsCache = {};
+const WHO = { staff: '💁', doctor: '👨‍⚕️', stylist: '💇', driver: '📦', officer: '🏛️', manager: '🔧', me: '🙋' };
+
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+async function api(path, body) {
+  const res = await fetch(path, body ? { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) } : undefined);
+  let data; try { data = await res.json(); } catch (e) { throw new Error('服务器返回异常（HTTP ' + res.status + '）'); }
+  if (!res.ok || data.error) throw new Error(data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+// ---------- 朗读 ----------
+let stopPlay = false, curAudio = null, curResolve = null;
+function stripStageNotes(text) {
+  return String(text ?? '')
+    .replace(/（[^）]*）|\([^)]*\)/g, '')
+    .replace(/[【\[][^】\]]*[】\]]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function formatJpWithNotes(text) {
+  return esc(text).replace(/(（[^）]+）|\([^)]+\))/g, '<span style="color:var(--muted); font-size:0.84em;">$1</span>');
+}
+function stopAllAudio() {
+  stopPlay = true;
+  if (curAudio) {
+    try { curAudio.pause(); curAudio.currentTime = 0; } catch (e) {}
+    curAudio = null;
+  }
+  if ('speechSynthesis' in window) {
+    try { speechSynthesis.cancel(); } catch (e) {}
+  }
+  if (curResolve) {
+    const r = curResolve;
+    curResolve = null;
+    r();
+  }
+  document.querySelectorAll('.bubble.playing').forEach(el => el.classList.remove('playing'));
+}
+function resolveVoice(who = 'staff') {
+  const mode = (document.getElementById('voiceMode') || {}).value || 'auto';
+  if (mode === 'nanami' || mode === 'keita') return mode;
+  return (who === 'doctor' || who === 'driver' || who === 'manager' || who === 'me') ? 'keita' : 'nanami';
+}
+async function getAudio(text, who = 'staff') {
+  const spoken = stripStageNotes(text);
+  if (!spoken) return '';
+  const rate = parseFloat(document.getElementById('speed').value), voice = resolveVoice(who), key = voice + '|' + rate + '|' + spoken;
+  if (!(key in ttsCache)) { try { ttsCache[key] = (await api('/api/tts', { text: spoken, rate, voice })).b64 || ''; } catch (e) { ttsCache[key] = ''; } }
+  return ttsCache[key];
+}
+function playText(text, who = 'staff') {
+  const spoken = stripStageNotes(text);
+  if (!spoken) return Promise.resolve();
+  if (curAudio) {
+    try { curAudio.pause(); curAudio.currentTime = 0; } catch (e) {}
+    curAudio = null;
+  }
+  if ('speechSynthesis' in window) {
+    try { speechSynthesis.cancel(); } catch (e) {}
+  }
+  if (curResolve) {
+    const r = curResolve;
+    curResolve = null;
+    r();
+  }
+  return new Promise(async resolve => {
+    let finished = false;
+    const done = () => {
+      if (finished) return;
+      finished = true;
+      if (curResolve === done) curResolve = null;
+      resolve();
+    };
+    curResolve = done;
+    const b64 = await getAudio(spoken, who);
+    if (stopPlay || finished) { done(); return; }
+    if (b64) {
+      const a = new Audio('data:audio/mp3;base64,' + b64);
+      curAudio = a;
+      a.onended = () => { if (curAudio === a) curAudio = null; done(); };
+      a.onerror = () => { if (curAudio === a) curAudio = null; done(); };
+      a.play().catch(() => { if (curAudio === a) curAudio = null; done(); });
+      return;
+    }
+    if (!('speechSynthesis' in window)) { done(); return; }
+    const u = new SpeechSynthesisUtterance(spoken); u.lang = 'ja-JP'; u.rate = parseFloat(document.getElementById('speed').value);
+    const v = speechSynthesis.getVoices().filter(v => v.lang.includes('ja')); const pv = v.find(x => /Natural|Google|Nanami|Keita/.test(x.name)) || v[0]; if (pv) u.voice = pv;
+    u.onend = done; u.onerror = done; speechSynthesis.speak(u);
+  });
+}
+async function speak(text, btn, who = 'staff') {
+  stopPlay = false;
+  if (btn) btn.disabled = true;
+  await playText(text, who);
+  if (btn) btn.disabled = false;
+}
+function speakBtn(text, label = '🔊', who = 'staff') {
+  return `<button class="small" onclick="speak(${esc(JSON.stringify(text))}, this, ${esc(JSON.stringify(who))})">${label}</button>`;
+}
+async function playPart(pi, btn) {
+  stopAllAudio();
+  stopPlay = false;
+  btn.disabled = true;
+  const els = document.querySelectorAll(`[data-part="${pi}"] .bubble`);
+  const lines = CUR.parts[pi].lines;
+  for (let i = 0; i < lines.length && !stopPlay; i++) {
+    if (els[i]) { els[i].classList.add('playing'); els[i].scrollIntoView({ block: 'nearest' }); }
+    await playText(lines[i].jp, lines[i].who);
+    if (els[i]) els[i].classList.remove('playing');
+    if (stopPlay) break;
+    await new Promise(r => setTimeout(r, 260));
+  }
+  btn.disabled = false;
+}
+
+// ---------- 列表 ----------
+function renderSceneList() {
+  const activeScenes = SCENES.filter(s => s.status !== 'archived');
+  const archivedScenes = SCENES.filter(s => s.status === 'archived');
+  const markedCnt = activeScenes.filter(s => s.status === 'marked_archive').length;
+  let html = '';
+  if (markedCnt > 0) {
+    html += `<div style="background:#451a03; border:1px solid #d97706; color:#fde68a; border-radius:6px; padding:5px 8px; font-size:0.75rem; margin-bottom:8px;">
+      🏷️ 已标记 <b>${markedCnt}</b> 个场景待 Archive（跟 AI 说「检查生活场景」即可归档并补充新场景）
+    </div>`;
+  }
+  let last = '';
+  activeScenes.forEach(s => {
+    if (s.category !== last) { html += `<div class="cat">${esc(s.category)}</div>`; last = s.category; }
+    const badge = s.status === 'marked_archive'
+      ? `<span style="float:right; font-size:0.68rem; background:#451a03; color:#fbbf24; border:1px solid #d97706; padding:0 5px; border-radius:99px;">🏷️待归档</span>`
+      : '';
+    html += `<div class="sitem ${CUR && CUR.id === s.id ? 'active' : ''}" data-id="${esc(s.id)}" onclick="selectScene('${s.id}')">${badge}${esc(s.icon || '')} ${esc(s.title)}</div>`;
+  });
+  if (archivedScenes.length > 0) {
+    html += `<details style="margin-top:14px; border-top:1px dashed var(--border); padding-top:8px;">
+      <summary style="cursor:pointer; font-size:0.78rem; color:var(--muted); font-weight:600;">📦 已归档场景库 (${archivedScenes.length}) · 点此随时调取</summary>
+      <div style="margin-top:6px;">
+        ${archivedScenes.map(s => `<div class="sitem ${CUR && CUR.id === s.id ? 'active' : ''}" data-id="${esc(s.id)}" onclick="selectScene('${s.id}')" style="opacity:0.82;">
+          <span style="float:right; font-size:0.66rem; color:#94a3b8;">📦已归档</span>${esc(s.icon || '')} ${esc(s.title)}
+        </div>`).join('')}
+      </div>
+    </details>`;
+  }
+  document.getElementById('slist').innerHTML = html || '<div class="empty">还没有场景卡</div>';
+}
+async function load() {
+  { const d = await api('/api/scenes'); SCENES = d.scenes; PART_STATS = d.part_stats || {}; }
+  renderSceneList();
+  const activeFirst = (SCENES.find(s => s.status !== 'archived') || SCENES[0] || {}).id;
+  const id = location.hash ? decodeURIComponent(location.hash.slice(1)) : activeFirst;
+  if (id && SCENES.find(s => s.id === id)) selectScene(id);
+}
+function selectScene(id) {
+  stopAllAudio();
+  CUR = SCENES.find(s => s.id === id); RP = null;
+  history.replaceState(null, '', '#' + encodeURIComponent(id));
+  renderSceneList();
+  render();
+}
+async function setSceneStatus(status, btn) {
+  if (!CUR) return;
+  if (btn) btn.disabled = true;
+  try {
+    const { scene_status } = await api('/api/scene/status', { scene: CUR.id, status });
+    CUR.status = scene_status.status;
+    CUR.marked_at = scene_status.marked_at || '';
+    CUR.archived_at = scene_status.archived_at || '';
+    renderSceneList();
+    render();
+  } catch (e) {
+    alert('更新状态失败：' + e.message);
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ---------- 主区 ----------
+function render() {
+  const s = CUR;
+  const st = s.status || 'active';
+  let statusBar = '';
+  if (st === 'active') {
+    statusBar = `<button class="small" style="background:#065f46; border-color:#10b981; color:#d1fae5; font-weight:600;" onclick="setSceneStatus('marked_archive', this)" title="标记已练完，下次让 AI 检查时会自动归档并为你生成 1 个全新生活场景">🏷️ 标注「已练完 · 待 Archive」</button>`;
+  } else if (st === 'marked_archive') {
+    statusBar = `<span style="font-size:0.78rem; background:#451a03; color:#fbbf24; border:1px solid #d97706; padding:2px 8px; border-radius:99px;">🏷️ 已标注「待 Archive」（对 AI 说「检查生活场景」即可归档并换新场景）</span>
+      <button class="small" onclick="setSceneStatus('active', this)">↩ 取消标注</button>`;
+  } else if (st === 'archived') {
+    statusBar = `<span style="font-size:0.78rem; background:#1e293b; color:#94a3b8; border:1px solid #475569; padding:2px 8px; border-radius:99px;">📦 已归档（可随时调取复习）</span>
+      <button class="small" onclick="setSceneStatus('active', this)">📤 移回在练列表</button>`;
+  }
+  let html = `<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:4px;">
+      <div><div class="title">${esc(s.icon || '')} ${esc(s.title)}</div><div class="setting">${esc(s.setting_cn)}</div></div>
+      <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">${statusBar}</div>
+    </div>
+    <div class="tasks">🎯 任务：${s.tasks_cn.map((t, i) => `${'①②③④⑤⑥'[i] || '·'} ${esc(t)}`).join('　')}</div>
+    <div class="tabs">${[['dialog', '📖 示范对话'], ['phrases', '🧠 表达自测'], ['vocab', '📚 词汇・意外・贴士'], ['roleplay', '🎭 角色扮演']].map(([k, l]) =>
+      `<button class="tab ${TAB === k ? 'on' : ''}" onclick="TAB='${k}'; stopAllAudio(); render()">${l}</button>`).join('')}</div>`;
+  html += { dialog: renderDialog, phrases: renderPhrases, vocab: renderVocab, roleplay: renderRoleplay }[TAB]();
+  document.getElementById('main').innerHTML = html;
+  if (TAB === 'phrases') showFlash();
+  if (TAB === 'roleplay') bindInput();
+}
+
+function renderDialog() {
+  let html = `<div class="tools">
+    <label class="sub"><input type="checkbox" id="showCn" onchange="document.querySelectorAll('.bubble .cn').forEach(e=>e.hidden=!this.checked)"> 显示中文</label>
+    <label class="sub"><input type="checkbox" id="maskMe" onchange="document.querySelectorAll('.line.me').forEach(e=>e.classList.toggle('masked', this.checked))"> 遮住我的台词（看中文自己说，点一下看答案）</label>
+    <button class="small" onclick="stopAllAudio()">⏹ 停止播放</button>
+    <span class="sub" style="margin-left:auto;">💡 括号内的（背景/动作说明）仅作提示，语音不会朗读</span></div>`;
+  CUR.parts.forEach((p, pi) => {
+    html += `<div class="ptitle">${esc(p.title)} <button class="small" onclick="playPart(${pi}, this)">▶ 连续播放这一段</button></div><div data-part="${pi}">`;
+    p.lines.forEach(l => {
+      html += `<div class="line ${l.who === 'me' ? 'me' : ''}"><div class="who">${WHO[l.who] || '💬'}</div>
+        <div class="bubble" onclick="this.parentElement.classList.remove('masked')"><div class="jp">${formatJpWithNotes(l.jp)} ${speakBtn(l.jp, '🔊', l.who)}</div><div class="cn" hidden>${esc(l.cn)}</div></div></div>`;
+    });
+    html += '</div>';
+  });
+  return html;
+}
+
+let FL = { order: [], i: 0, shown: false, again: [], check: null, loading: false, myAudioUrl: '' };
+let flashRec = null, flashChunks = [], flashRecording = false;
+function renderPhrases() {
+  return `<div class="sub" style="margin-bottom:8px">看中文提示，点 <b>「🎙️ 录音自己说」</b> 开口说日语（教练会实时识别并点评地道度与发音，还能回听自己的原声），或直接点「👀 直接看答案」。</div>
+    <div class="flash" id="flash"></div>
+    <details class="box" style="margin-top:10px"><summary>全部 ${CUR.phrases.length} 句一览</summary>
+      <table style="margin-top:6px">${CUR.phrases.map(p => `<tr><td>${esc(p.cn)}</td><td>${esc(p.jp)} ${speakBtn(p.jp)}</td></tr>`).join('')}</table></details>`;
+}
+function startFlash() {
+  FL = { order: [...CUR.phrases.keys()].sort(() => Math.random() - 0.5), i: 0, shown: false, again: [], check: null, loading: false, myAudioUrl: '' };
+}
+function revealFlashAnswer() {
+  const p = CUR && CUR.phrases ? CUR.phrases[FL.order[FL.i]] : null;
+  FL.shown = true;
+  showFlash();
+  if (p && p.jp) speak(p.jp, null, 'me');
+}
+function nextFlash(retry) {
+  stopAllAudio();
+  if (FL.myAudioUrl) { try { URL.revokeObjectURL(FL.myAudioUrl); } catch (e) {} }
+  if (retry) FL.again.push(FL.order[FL.i]);
+  FL.i++;
+  FL.shown = false;
+  FL.check = null;
+  FL.loading = false;
+  FL.myAudioUrl = '';
+  showFlash();
+}
+function playMyFlashAudio() {
+  if (!FL.myAudioUrl) return;
+  stopAllAudio();
+  const a = new Audio(FL.myAudioUrl);
+  curAudio = a;
+  a.onended = () => { if (curAudio === a) curAudio = null; };
+  a.play().catch(() => {});
+}
+async function toggleFlashRec() {
+  const btn = document.getElementById('flashMic');
+  if (!flashRecording) {
+    stopAllAudio();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      flashRec = new MediaRecorder(stream);
+      flashChunks = [];
+      flashRec.ondataavailable = e => { if (e.data.size) flashChunks.push(e.data); };
+      flashRec.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        const mime = flashRec.mimeType || 'audio/webm';
+        const blob = new Blob(flashChunks, { type: mime });
+        if (FL.myAudioUrl) { try { URL.revokeObjectURL(FL.myAudioUrl); } catch (e) {} }
+        FL.myAudioUrl = URL.createObjectURL(blob);
+        const r = new FileReader();
+        r.onloadend = () => submitFlashAttempt({ audio_b64: r.result.split(',')[1], audio_mime: mime, user_text: '' });
+        r.readAsDataURL(blob);
+      };
+      flashRec.start();
+      flashRecording = true;
+      if (btn) { btn.classList.add('rec'); btn.textContent = '⏹ 说完了，点这里判分'; }
+    } catch (e) {
+      alert('无法使用麦克风：' + e.message);
+    }
+  } else {
+    flashRec.stop();
+    flashRecording = false;
+    if (btn) { btn.classList.remove('rec'); btn.textContent = '🎙️ 录音自己说'; }
+  }
+}
+function sendFlashText() {
+  const inp = document.getElementById('flashTxt');
+  if (!inp) return;
+  const val = inp.value.trim();
+  if (!val) return;
+  submitFlashAttempt({ user_text: val });
+}
+async function submitFlashAttempt(extra) {
+  const p = CUR.phrases[FL.order[FL.i]];
+  if (!p) return;
+  FL.loading = true;
+  FL.shown = true;
+  showFlash();
+  try {
+    const { result } = await api('/api/scene/phrase_check', {
+      scene: CUR.id,
+      target_cn: p.cn,
+      target_jp: p.jp,
+      ...extra,
+    });
+    FL.check = result;
+  } catch (e) {
+    FL.check = { error: e.message };
+  } finally {
+    FL.loading = false;
+    showFlash();
+  }
+}
+function showFlash() {
+  if (!FL.order.length || FL.scene !== CUR.id) { startFlash(); FL.scene = CUR.id; }
+  const el = document.getElementById('flash');
+  if (!el) return;
+  if (FL.i >= FL.order.length) {
+    if (FL.again.length) { FL.order = FL.again; FL.again = []; FL.i = 0; }
+    else { el.innerHTML = `<div class="q">🎉 这一轮全部说出来了！</div><div style="margin-top:10px"><button class="primary" onclick="startFlash(); FL.scene=CUR.id; showFlash()">再来一轮</button></div>`; return; }
+  }
+  const p = CUR.phrases[FL.order[FL.i]];
+  let checkHtml = '';
+  if (FL.loading) {
+    checkHtml = `<div class="box" style="margin-top:10px; text-align:left"><span class="loading">⏳ 正在识别你的发音并对比地道度…</span></div>`;
+  } else if (FL.check) {
+    if (FL.check.error) {
+      checkHtml = `<div class="box" style="margin-top:10px; text-align:left"><div class="err">⚠️ 点评出错：${esc(FL.check.error)}</div></div>`;
+    } else {
+      const c = FL.check;
+      checkHtml = `<div class="box" style="margin-top:10px; text-align:left; border-color:${c.ok ? 'var(--success)' : 'var(--warning)'}">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap">
+          <div><b>🙋 你说的：</b><span style="font-size:1rem; color:#f1f5f9">${esc(c.user_transcript || '（未识别出语音）')}</span></div>
+          ${FL.myAudioUrl ? `<button class="small" onclick="playMyFlashAudio()">🎧 回听我的原声</button>` : ''}
+        </div>
+        <div style="margin-top:6px; color:${c.ok ? 'var(--success)' : 'var(--warning)'}; font-weight:600">
+          ${c.ok ? '✓ 自然过关：' : '💡 改进建议：'}${esc(c.verdict_cn || '')}
+        </div>
+        ${c.better_jp ? `<div style="margin-top:4px">✨ <b>按你的话微调：</b><span class="good">${esc(c.better_jp)}</span> ${speakBtn(c.better_jp, '🔊', 'me')}</div>` : ''}
+        ${c.pronunciation_tip_cn ? `<div style="margin-top:4px; color:#cbd5e1">🎵 <b>发音提示：</b>${esc(c.pronunciation_tip_cn)}</div>` : ''}
+      </div>`;
+    }
+  }
+  el.innerHTML = `<div class="sub">${FL.i + 1} / ${FL.order.length}${FL.again.length ? ` · 待重练 ${FL.again.length}` : ''}</div>
+    <div class="q" style="margin-top:4px">🇨🇳 ${esc(p.cn)}</div>
+    ${FL.shown ? `<div class="a">🇯🇵 参考表达：${esc(p.jp)} ${speakBtn(p.jp, '🔊 标准音', 'me')}</div>` : ''}
+    ${checkHtml}
+    <div style="margin-top:12px; display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:wrap">
+      <button class="mic" id="flashMic" style="min-width:130px; padding:7px 14px" onclick="toggleFlashRec()">${FL.shown ? '🎙️ 再录一遍重说' : '🎙️ 录音自己说'}</button>
+      <input id="flashTxt" type="text" placeholder="或打字输入日语按回车自测..." style="width:210px" onkeydown="if(event.key==='Enter')sendFlashText()">
+      <button class="small" onclick="sendFlashText()">判分</button>
+      ${!FL.shown ? `<button class="primary" onclick="revealFlashAnswer()">👀 直接看答案</button>` : ''}
+    </div>
+    ${FL.shown ? `<div style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border); display:flex; gap:8px; justify-content:center">
+      <button onclick="nextFlash(true)">😓 记入待重练</button>
+      <button class="primary" onclick="nextFlash(false)">😀 过关·下一句 →</button>
+      <button class="small" onclick="stopAllAudio()">⏹ 停止语音</button>
+    </div>` : ''}`;
+}
+
+function renderVocab() {
+  return `<div class="box"><h3>专业词汇</h3><table><tr><th>词</th><th>读音</th><th>中文</th><th>备注</th></tr>
+      ${CUR.vocab.map(v => `<tr><td>${esc(v.word)} ${speakBtn(v.reading ? v.reading.split('／')[0] : v.word)}</td><td>${esc(v.reading)}</td><td>${esc(v.cn)}</td><td class="sub">${esc(v.note)}</td></tr>`).join('')}</table></div>
+    <div class="box"><h3>可能的意外情况（角色扮演时会随机出 1–2 个）</h3>
+      ${CUR.curveballs.map(c => `<div style="margin-bottom:8px"><b>${esc(c.situation_cn)}</b><div>💁 ${esc(c.npc_jp)} ${speakBtn(c.npc_jp)}</div><div class="good">🙋 ${esc(c.reply_jp)} ${speakBtn(c.reply_jp.split('／')[0])}</div></div>`).join('')}</div>
+    <div class="box"><h3>小贴士</h3>${CUR.tips_cn.map(t => `<div>• ${esc(t)}</div>`).join('')}</div>`;
+}
+
+// ---------- 角色扮演 ----------
+function surpriseMode() { try { return localStorage.getItem('scene_surprise_mode') || 'auto'; } catch (e) { return 'auto'; } }
+function setSurpriseMode(v) { try { localStorage.setItem('scene_surprise_mode', v); } catch (e) {} render(); }
+function partDone(part) { return ((PART_STATS[CUR.id] || {})[part]) || 0; }
+function surpriseOn(part) {
+  const m = surpriseMode();
+  return m === 'on' ? true : m === 'off' ? false : partDone(part) >= SURPRISE_AFTER;
+}
+function pickCurveballs(part) {
+  if (!surpriseOn(part)) return [];
+  const pool = CUR.curveballs.filter(c => c.part === part).sort(() => Math.random() - 0.5);
+  return pool.slice(0, pool.length >= 2 && Math.random() < 0.5 ? 2 : 1);
+}
+function startRoleplay(part) {
+  stopAllAudio();
+  const p = CUR.parts.find(x => x.id === part);
+  const first = p.lines.find(l => l.who !== 'me');
+  RP = { part, curveballs: pickCurveballs(part), history: [{ role: 'npc', jp: first.jp, cn: first.cn }], fb: [], fixes: [], done: false, audio_used: false, summary: null };
+  render();
+  if (document.getElementById('autoSpeak').checked) { stopPlay = false; playText(first.jp); }
+}
+function renderRoleplay() {
+  const auto = (() => { try { return localStorage.getItem('scene_autospeak') !== '0'; } catch (e) { return true; } })();
+  let html = `<div class="tools"><label class="sub"><input type="checkbox" id="autoSpeak" ${auto ? 'checked' : ''} onchange="try{localStorage.setItem('scene_autospeak', this.checked?'1':'0')}catch(e){}"> 对方说话自动朗读</label>
+    <label class="sub"><input type="checkbox" id="rpCn" ${RP_CN ? 'checked' : ''} onchange="RP_CN=this.checked; document.querySelectorAll('.chat .cn').forEach(e=>e.hidden=!this.checked)"> 显示对方的中文</label></div>`;
+  if (!RP) {
+    const m = surpriseMode();
+    return html + `<div class="box" style="margin-bottom:10px"><b>🎲 随机应变（意外情况）</b>
+      <select onchange="setSurpriseMode(this.value)" style="margin-left:6px">
+        <option value="auto" ${m === 'auto' ? 'selected' : ''}>自动：这一段完成满 ${SURPRISE_AFTER} 次后开启</option>
+        <option value="off" ${m === 'off' ? 'selected' : ''}>总是关（照示范流程练）</option>
+        <option value="on" ${m === 'on' ? 'selected' : ''}>总是开</option></select>
+      <div class="sub" style="margin-top:4px">开启时对方会随机插入 1–2 个意外情况，不告诉你是哪个。「完成」= 总结里显示 ✅ 任务完成，两台电脑的记录合计。选项记在这台设备的浏览器里。</div></div>
+      <div class="sub" style="margin-bottom:10px">Gemini 会扮演对方，按卡片的流程走。每说一句都会简短点评；结束后给总结，记进进步页。<br>建议先看「示范对话」、做一遍「表达自测」再来。</div>
+      ${CUR.roleplay.map(r => `<div class="box"><b>${esc(r.title)}</b>（对方：${esc(r.npc_role)}）<div class="sub">目标：${esc(r.goal_cn)}</div>
+        <div class="sub" style="margin-top:2px">已完成 ${partDone(r.part)} 次 · ${surpriseOn(r.part) ? '🎲 意外情况：开' : m === 'auto' ? `意外情况：关（再完成 ${SURPRISE_AFTER - partDone(r.part)} 次自动开启）` : '意外情况：关'}</div>
+        <button class="primary" style="margin-top:6px" onclick="startRoleplay('${r.part}')">▶ 开始</button></div>`).join('')}`;
+  }
+  const rp = CUR.roleplay.find(r => r.part === RP.part) || {};
+  html += `<div class="box"><b>${esc(rp.title)}</b> · 目标：${esc(rp.goal_cn)}
+    <details style="margin-top:4px"><summary class="sub" style="cursor:pointer">💡 卡住了？看看可以用的表达</summary>${CUR.phrases.map(p => `<div>${esc(p.jp)} <span class="sub">${esc(p.cn)}</span></div>`).join('')}</details></div>`;
+  html += `<div class="chat" id="chat">`;
+  let fi = 0;
+  RP.history.forEach((h, i) => {
+    if (h.role === 'npc') {
+      if (h.curveball) html += `<div class="curve">⚡ 意外情况：${esc(h.curveball)}</div>`;
+      html += `<div class="line"><div class="who">💁</div><div class="bubble"><div class="jp">${esc(h.jp)} ${speakBtn(h.jp)}</div><div class="cn" ${RP_CN ? '' : 'hidden'}>${esc(h.cn || '')}</div></div></div>`;
+    } else {
+      html += `<div class="line me"><div class="who">🙋</div><div class="bubble"><div class="jp">${esc(h.jp)}</div></div></div>`;
+      const f = RP.fb[fi++];
+      if (f) html += `<div class="fb">${f.ok && !(f.fixes || []).length ? '<span class="ok">✓ 自然，没问题</span>' : ''}
+        ${(f.fixes || []).map(x => `<div><span class="bad">${esc(x.original)}</span> → <span class="good">${esc(x.better)}</span> ${speakBtn(x.better)} <span class="why">${esc(x.reason_cn)}</span></div>`).join('')}
+        ${f.tip_cn ? `<div class="why">💡 ${esc(f.tip_cn)}</div>` : ''}</div>`;
+    }
+  });
+  html += `</div><div id="rpStatus"></div>`;
+  if (RP.summary) {
+    const s = RP.summary, sc = s.scores || {}, L = { grammar: '语法', keigo: '敬语', logic: '完成目标', fluency: '流畅', pronunciation: '发音' };
+    html += `<div class="done">${s.goal_achieved ? '✅ 任务完成！' : '⚠️ 任务没有完全完成'} ${esc(s.one_line_progress_cn || '')}
+      <div style="margin-top:6px">${Object.keys(L).filter(k => sc[k] != null && !isNaN(+sc[k])).map(k => `<span class="chip">${L[k]} ${sc[k]}</span>`).join('')}</div></div>
+      ${(s.good_points_cn || []).length ? `<div class="box"><h3>做得好的</h3>${s.good_points_cn.map(x => `<div>• ${esc(x)}</div>`).join('')}</div>` : ''}
+      ${(s.review_phrases || []).length ? `<div class="box"><h3>这次值得记住的说法</h3>${s.review_phrases.map(p => `<div>${esc(p.jp)} ${speakBtn(p.jp)} <span class="sub">${esc(p.cn)}</span></div>`).join('')}</div>` : ''}
+      ${RP.curveballs.length ? `<div class="box"><h3>这次的意外情况</h3>${RP.curveballs.map(c => `<div>• ${esc(c.situation_cn)}（参考回答：${esc(c.reply_jp)}）</div>`).join('')}</div>` : '<div class="box sub">这次没有插入意外情况（随机应变未开启）。</div>'}
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+        <button class="primary" onclick="startRoleplay('${RP.part}')">🔁 再来一次（意外情况会换）</button>
+        <button onclick="RP=null; render()">换一段</button>
+        ${CUR && (CUR.status === 'active' || !CUR.status) ? `<button onclick="setSceneStatus('marked_archive', this)" style="border-color:#d97706; color:#92400e; background:#fffbeb">🏷️ 本场景已通关 · 标注待 Archive</button>` : ''}
+      </div>`;
+  } else {
+    html += `<div class="row" style="margin-top:8px">
+      <button class="mic" id="mic" onclick="toggleRec()">🎙️ 点击录音</button>
+      <textarea id="txt" placeholder="也可以打字（Ctrl+Enter 发送）"></textarea>
+      <button class="primary" onclick="sendText()">发送</button></div>
+      <div style="margin-top:8px; display:flex; gap:8px"><button class="small" onclick="finish()">${RP.done ? '✅ 看总结' : '结束并总结'}</button>
+      <button class="small" onclick="if(confirm('放弃这次对话？（不会记录）')){RP=null; render()}">放弃</button></div>`;
+  }
+  return html;
+}
+function bindInput() {
+  const t = document.getElementById('txt');
+  if (t) t.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) sendText(); });
+  const c = document.getElementById('chat'); if (c) c.lastElementChild && c.lastElementChild.scrollIntoView({ block: 'nearest' });
+}
+
+async function toggleRec() {
+  const btn = document.getElementById('mic');
+  if (!recording) {
+    stopAllAudio();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      rec = new MediaRecorder(stream); chunks = [];
+      rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+      rec.onstop = () => { stream.getTracks().forEach(t => t.stop()); const mime = rec.mimeType || 'audio/webm';
+        const r = new FileReader(); r.onloadend = () => turn({ audio_b64: r.result.split(',')[1], audio_mime: mime, user_text: '' }); r.readAsDataURL(new Blob(chunks, { type: mime })); };
+      rec.start(); recording = true; btn.classList.add('rec'); btn.textContent = '⏹ 说完了，点这里发送';
+    } catch (e) { alert('无法使用麦克风：' + e.message); }
+  } else { rec.stop(); recording = false; btn.classList.remove('rec'); btn.textContent = '🎙️ 点击录音'; }
+}
+function sendText() { const t = document.getElementById('txt').value.trim(); if (t) turn({ user_text: t }); }
+
+async function turn(extra) {
+  lastPayload = { scene: CUR.id, part: RP.part, curveballs: RP.curveballs, history: RP.history.map(({ role, jp }) => ({ role, jp })), ...extra };
+  const st = document.getElementById('rpStatus');
+  st.innerHTML = `<div class="loading">⏳ 对方在听…（录音一般 10–40 秒）</div>`;
+  try {
+    const { result: r } = await api('/api/scene/turn', lastPayload);
+    if (extra.audio_b64) RP.audio_used = true;
+    RP.history.push({ role: 'me', jp: r.user_transcript || extra.user_text || '（录音）' });
+    RP.fb.push(r.feedback || {});
+    (r.feedback && r.feedback.fixes || []).forEach(f => RP.fixes.push(f));
+    if (r.npc && r.npc.jp) RP.history.push({ role: 'npc', jp: r.npc.jp, cn: r.npc.cn, curveball: r.curveball_used || '' });
+    RP.done = !!r.scene_done;
+    render();
+    if (r.npc && r.npc.jp && document.getElementById('autoSpeak').checked) { stopPlay = false; playText(r.npc.jp); }
+  } catch (e) {
+    st.innerHTML = `<div class="err">⚠️ 出错了${extra.audio_b64 ? '（录音已保留）' : ''}：${esc(e.message)}</div><button class="primary" onclick="retryTurn()">🔁 原样重试</button>`;
+  }
+}
+async function retryTurn() { if (lastPayload) { const { scene, part, curveballs, history, ...extra } = lastPayload; await turn(extra); } }
+
+async function finish() {
+  if (!RP.history.some(h => h.role === 'me')) { alert('还没说话呢。'); return; }
+  const st = document.getElementById('rpStatus');
+  st.innerHTML = `<div class="loading">⏳ 正在总结…</div>`;
+  try {
+    const { result } = await api('/api/scene/finish', { scene: CUR.id, part: RP.part, curveballs: RP.curveballs, history: RP.history.map(({ role, jp }) => ({ role, jp })), fixes: RP.fixes, audio_used: RP.audio_used });
+    RP.summary = result;
+    if (result.goal_achieved) { const d = PART_STATS[CUR.id] = PART_STATS[CUR.id] || {}; d[RP.part] = (d[RP.part] || 0) + 1; }
+    render();
+  } catch (e) { st.innerHTML = `<div class="err">⚠️ 总结失败：${esc(e.message)}</div><button class="primary" onclick="finish()">🔁 重试</button>`; }
+}
+
+load().catch(e => { document.getElementById('slist').innerHTML = `<div class="err">读取失败：${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>

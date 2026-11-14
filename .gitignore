@@ -1,0 +1,45 @@
+# 密钥与环境变量
+.env
+*.pem
+*.key
+credentials*.json
+token*.json
+
+# 运行日志与临时同步锁文件
+*.log
+coach_errors.log
+.*.sync_tmp_*
+
+# Python 与系统缓存
+__pycache__/
+*.py[cod]
+.venv/
+.tmp_venv/
+.DS_Store
+
+# 忽略从 OneDrive 单向拉取的外部只读镜像（正本在 OneDrive 资料库中）
+data/01_自分の材料/
+data/02_企業別/
+
+# TTS 音频缓存（可随时重新生成）
+data/tts_cache/
+
+# 忽略大体积二进制音频/图片（保留 .json / .jsonl / .md / .csv 文本数据）
+*.m4a
+*.mp3
+*.wav
+*.webm
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.xlsx
+
+# 网页图标是项目自带的小文件，需要跟踪
+!static/*.png
+
+# 个人数据（姓名、在投公司、练习记录）不进公开仓库，只在本机和 OneDrive
+data/
+
+# 个人信息覆盖（姓名、学历、研究、目标公司、本机路径）
+local_profile.json

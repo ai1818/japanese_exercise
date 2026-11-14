@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>面试题库练习</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-title" content="口语私教台">
+<style>
+  :root {
+    --bg: #0f172a; --panel: #1e293b; --panel2: #0b1120; --border: #334155;
+    --text: #f1f5f9; --muted: #94a3b8; --accent: #38bdf8;
+    --success: #34d399; --warning: #fbbf24; --danger: #f87171;
+    --st1: #fbbf24; --st2: #a78bfa; --st3: #38bdf8; --st4: #34d399;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", "Meiryo", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6; padding: 14px 16px 30px;
+  }
+  header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 14px; }
+  h1 { font-size: 1.15rem; }
+  .sub { font-size: 0.8rem; color: var(--muted); }
+  .nav { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  a.btn, button { font: inherit; font-size: 0.85rem; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--text); padding: 6px 12px; cursor: pointer; text-decoration: none; }
+  button.primary { background: #2563eb; border-color: #3b82f6; font-weight: 600; }
+  button.primary:hover { background: #1d4ed8; }
+  button:disabled { opacity: 0.5; cursor: wait; }
+  .small { padding: 2px 8px; font-size: 0.76rem; }
+  select, textarea, input { font: inherit; font-size: 0.88rem; background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+  .layout { display: grid; grid-template-columns: 290px 1fr; gap: 16px; align-items: start; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .qlist { max-height: calc(100vh - 110px); overflow-y: auto; position: sticky; top: 10px; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } .qlist { max-height: 260px; position: static; } }
+  .cat { font-size: 0.74rem; color: var(--muted); margin: 10px 0 4px; letter-spacing: 0.05em; }
+  .cat:first-child { margin-top: 0; }
+  .qitem { display: flex; gap: 8px; align-items: flex-start; padding: 7px 8px; border-radius: 6px; cursor: pointer; font-size: 0.84rem; border: 1px solid transparent; }
+  .qitem:hover { background: var(--panel2); }
+  .qitem.active { background: var(--panel2); border-color: var(--accent); }
+  .badge { flex-shrink: 0; font-size: 0.7rem; border-radius: 99px; padding: 0 7px; border: 1px solid; white-space: nowrap; margin-top: 2px; }
+  .b1 { color: var(--st1); border-color: var(--st1); } .b2 { color: var(--st2); border-color: var(--st2); }
+  .b3 { color: var(--st3); border-color: var(--st3); } .b4 { color: var(--st4); border-color: var(--st4); }
+  .b0 { color: var(--muted); border-color: var(--border); }
+  .summary { font-size: 0.8rem; color: var(--muted); margin-bottom: 8px; }
+  .qhead { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+  .qjp { font-size: 1.02rem; font-weight: 600; }
+  .qcn { font-size: 0.78rem; color: var(--muted); }
+  .intent { font-size: 0.78rem; color: #cbd5e1; background: var(--panel2); border-radius: 6px; padding: 4px 8px; margin-top: 5px; }
+  .tabs { display: flex; gap: 6px; margin: 8px 0 6px; flex-wrap: wrap; }
+  .tab { border-radius: 99px; padding: 3px 12px; font-size: 0.8rem; }
+  .tab.on { background: #1e3a8a; border-color: var(--accent); font-weight: 700; }
+  .tab .cur { font-size: 0.7rem; color: var(--success); margin-left: 4px; }
+  .howto { font-size: 0.78rem; color: var(--muted); margin-bottom: 6px; }
+  .seg { background: var(--panel2); border-radius: 6px; padding: 6px 10px; margin-bottom: 5px; border-left: 3px solid var(--accent); }
+  .seg .part { font-size: 0.72rem; color: var(--accent); font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+  .seg .jp { font-size: 0.96rem; letter-spacing: 0.02em; }
+  .cn { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .blank { display: inline-block; min-width: 3.5em; border-bottom: 2px solid var(--st2); color: transparent; cursor: pointer; user-select: none; text-align: center; background: #1e1b4b; border-radius: 3px 3px 0 0; }
+  .blank.show { color: var(--st2); font-weight: 700; }
+  .slot-warn { background: #451a03; border: 1px solid #b45309; color: #fde68a; border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; margin-bottom: 6px; }
+  details.box { background: var(--panel2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; margin-bottom: 6px; font-size: 0.82rem; }
+  details.box summary { cursor: pointer; font-weight: 600; color: #cbd5e1; }
+  .answer { margin-top: 10px; border-top: 2px solid var(--accent); padding: 12px; background: #0b1120; border-radius: 8px; }
+  .row { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+  .row textarea { flex: 1; min-width: 200px; height: 56px; resize: vertical; }
+  .mic { background: #dc2626; border-color: #ef4444; font-weight: 700; min-width: 128px; }
+  .mic.rec { background: #991b1b; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,.6); } 70% { box-shadow: 0 0 0 12px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }
+  .result { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .rblock { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 0.88rem; }
+  .rblock h3 { font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+  .chip { display: inline-block; border-radius: 99px; padding: 0 8px; font-size: 0.76rem; border: 1px solid; margin: 0 4px 4px 0; }
+  .ok { color: var(--success); } .ng { color: var(--danger); }
+  .bad { color: #fca5a5; } .good { color: #6ee7b7; font-weight: 600; } .why { color: #cbd5e1; font-size: 0.8rem; }
+  .pass { background: #064e3b; border: 1px solid var(--success); color: #d1fae5; border-radius: 8px; padding: 10px 12px; font-weight: 600; }
+  .err { background: #450a0a; border: 1px solid var(--danger); color: #fecaca; border-radius: 8px; padding: 10px 12px; font-size: 0.84rem; white-space: pre-wrap; }
+  .empty { color: var(--muted); padding: 30px 0; text-align: center; }
+  .loading { color: var(--muted); font-size: 0.88rem; padding: 10px 0; }
+  .notice { background: #172554; border: 1px solid #1d4ed8; color: #dbeafe; border-radius: 8px; padding: 8px 10px; font-size: 0.8rem; margin-bottom: 10px; }
+  .notice.warn { background: #451a03; border-color: #b45309; color: #fde68a; }
+  .notice button { margin-top: 6px; }
+  .co { font-size: 0.7rem; color: #f0abfc; margin-left: 2px; }
+  .stale { font-size: 0.7rem; color: var(--warning); margin-left: 2px; }
+  .cobar { background: #3b0764; border: 1px solid #a855f7; color: #f3e8ff; border-radius: 8px; padding: 8px 12px; font-size: 0.84rem; margin-top: 10px; }
+  label.f { display: block; font-size: 0.82rem; color: var(--muted); margin: 10px 0 4px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>📚 面试题库 · 先背模板，再说成自己的话</h1>
+    <div class="sub">每题三阶段：① 跟读（看着念）→ ② 填空（关键词遮住）→ ③ 自由（不看模板，用自己的话）。每阶段通过后自动进入下一阶段。</div>
+  </div>
+  <div class="nav">
+    <select id="speed" title="朗读语速">
+      <option value="0.75">语速 0.75x</option>
+      <option value="0.9" selected>语速 0.9x</option>
+      <option value="1.0">语速 1.0x</option>
+    </select>
+    <button class="small" onclick="stopAllAudio()" title="立即中断当前正在播放的语音">⏹ 停止播放</button>
+    <select id="company" title="选一家公司：和公司有关的题会换成这家公司的版本" onchange="switchCompany(this.value)"></select>
+    <button id="genAllBtn" onclick="generateAll()" title="模板由 Claude 在对话里写">📝 缺模板？</button>
+    <a class="btn" href="/scenes">🗣 生活场景</a>
+    <a class="btn" href="/progress" target="_blank">📈 进步页</a>
+    <a class="btn" href="/">← 回练习台</a>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="card qlist" id="qlist"><div class="loading">读取题库...</div></div>
+  <div class="card" id="main"><div class="empty">← 从左边选一道题开始</div></div>
+</div>
+
+<script>
+let BANK = null, CUR = null, VIEW_STAGE = 1, CTX = null;
+let rec = null, chunks = [], recording = false;
+const ttsCache = {};
+const STAGE_HOWTO = {
+  1: '看着模板大声念，先点 🔊 听一遍再跟读。念熟了就按「录音」念一遍给教练听：检查读错、发音、节奏。',
+  2: '关键词被遮住了（点紫色空格可以偷看）。看着骨架把整段说出来，教练会检查每部分有没有说到、关键词记住了多少。',
+  3: '不看模板，用自己的话回答。只给你结构提示（也可以隐藏）。教练只看逻辑和自然度，不要求和模板一字不差，还会给你一版「保留你自己说法」的修改稿。',
+};
+
+let COMPANY = '';
+try { COMPANY = localStorage.getItem('bank_company') || ''; } catch (e) {}
+
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function stageOf(id) { return (BANK.status[id] || {}).stage || 1; }
+function isCoQ(id) { return (BANK.company_qids || []).includes(id); }
+function coObj() { return COMPANY ? (BANK.companies || {})[COMPANY] : null; }
+// 当前这道题要用哪份模板：选了公司且这题和公司有关 → 公司版（没有就先显示通用版）
+function tplOf(q) {
+  const c = coObj();
+  if (c && isCoQ(q.id)) {
+    const ct = (c.templates || {})[q.id];
+    if (ct) return { t: ct, kind: 'company' };
+    return { t: q.template, kind: 'company-missing' };
+  }
+  return { t: q.template, kind: 'general' };
+}
+function isStale(t, kind) {
+  if (!t) return false;
+  if (kind === 'company' && t.materials_changed) return true;
+  return !!(t.profile_hash && BANK.profile && t.profile_hash !== BANK.profile.hash);
+}
+function badge(id) {
+  const q = BANK.questions.find(x => x.id === id);
+  if (!q.template) return '<span class="badge b0">未生成</span>';
+  const s = stageOf(id);
+  return `<span class="badge b${s}">${s === 4 ? '✓ 已掌握' : s + ' ' + BANK.stages[s]}</span>`;
+}
+function renderCompanySelect() {
+  const sel = document.getElementById('company');
+  const cs = BANK.companies || {};
+  if (COMPANY && !cs[COMPANY]) COMPANY = '';
+  sel.innerHTML = `<option value="">🏢 通用版（不针对公司）</option>` +
+    Object.entries(cs).map(([k, c]) => `<option value="${esc(k)}">🏢 ${esc(c.name)} 版</option>`).join('') +
+    `<option value="__new__">＋ 新建公司版…</option>` + (COMPANY ? `<option value="__edit__">✎ 编辑当前公司的资料</option>` : '');
+  sel.value = COMPANY;
+}
+function switchCompany(v) {
+  if (v === '__new__' || v === '__edit__') { renderCompanyForm(v === '__edit__' ? COMPANY : ''); document.getElementById('company').value = COMPANY; return; }
+  COMPANY = v;
+  try { localStorage.setItem('bank_company', v); } catch (e) {}
+  renderCompanySelect(); renderList(); if (CUR) renderMain();
+}
+
+async function api(path, body) {
+  const res = await fetch(path, body ? { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) } : undefined);
+  let data; try { data = await res.json(); } catch (e) { throw new Error('服务器返回异常（HTTP ' + res.status + '）'); }
+  if (!res.ok || data.error) throw new Error(data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+async function load(keepId) {
+  BANK = await api('/api/bank');
+  renderCompanySelect();
+  renderList();
+  const id = keepId || (location.hash ? decodeURIComponent(location.hash.slice(1)) : '');
+  if (id && BANK.questions.find(q => q.id === id)) select(id, true);
+}
+
+function renderList() {
+  const qs = BANK.questions;
+  const done = qs.filter(q => stageOf(q.id) === 4).length, gen = qs.filter(q => q.template).length;
+  let html = '';
+  const p = BANK.profile || {};
+  if (p.master_newer) {
+    html += `<div class="notice warn">📝 Master_Facts（${esc(p.master_mtime)}）比 个人素材（${esc(p.profile_mtime)}）新，可能有新事实还没同步。跟 Claude 说一声「同步」就行。</div>`;
+  }
+  const staleGen = qs.filter(q => q.template && isStale(q.template, 'general'));
+  if (staleGen.length) {
+    const auto = staleGen.filter(q => !q.template.edited), mine = staleGen.filter(q => q.template.edited);
+    html += `<div class="notice warn">🔄 个人素材更新过，有 ${staleGen.length} 题的模板是用旧素材写的。
+      ${mine.length ? `<br>其中 ${mine.length} 题你改过（${mine.map(q => esc(q.question_cn)).join('、')}），不会自动覆盖，请自己看一下。` : ''}
+      ${auto.length ? `<br><button class="small primary" id="regenStaleBtn" onclick="regenStale()">📝 请 Claude 按新素材更新 ${auto.length} 题</button>` : ''}</div>`;
+  }
+  const c = coObj();
+  if (c) {
+    const cq = qs.filter(q => isCoQ(q.id));
+    const have = cq.filter(q => (c.templates || {})[q.id]);
+    const changed = have.filter(q => isStale(c.templates[q.id], 'company'));
+    html += `<div class="notice">🏢 现在是「${esc(c.name)}」版：标 🏢 的 ${cq.length} 题换成这家公司的版本，其余题和通用版一样。
+      已生成 ${have.length}/${cq.length}${changed.length ? `，${changed.length} 题的资料或素材有变化` : ''}。
+      ${have.length < cq.length || changed.length ? `<br><button class="small primary" id="coAllBtn" onclick="generateCompanyAll()">📝 请 Claude 写${changed.length ? '/更新' : ''}这家公司的版本</button>` : ''}</div>`;
+  }
+  html += `<div class="summary">共 ${qs.length} 题 · 已生成模板 ${gen} · 已掌握 ${done}</div>`;
+  let lastCat = '';
+  qs.forEach(q => {
+    if (q.category !== lastCat) { html += `<div class="cat">${esc(q.category)}</div>`; lastCat = q.category; }
+    const { t, kind } = tplOf(q);
+    const mark = (c && isCoQ(q.id)) ? `<span class="co" title="${kind === 'company' ? '已有公司版' : '公司版还没生成'}">🏢${kind === 'company' ? '' : '?'}</span>` : '';
+    const st = isStale(t, kind === 'company-missing' ? 'general' : kind) ? '<span class="stale" title="模板是用旧资料写的">⟳</span>' : '';
+    html += `<div class="qitem ${CUR && CUR.id === q.id ? 'active' : ''}" onclick="select('${q.id}')">${badge(q.id)}<span>${esc(q.question_cn)}${mark}${st}</span></div>`;
+  });
+  document.getElementById('qlist').innerHTML = html;
+}
+
+function select(id, keepStage) {
+  if (!CUR || CUR.id !== id) CTX = null;
+  CUR = BANK.questions.find(q => q.id === id);
+  if (!keepStage || !VIEW_STAGE) VIEW_STAGE = Math.min(3, stageOf(id));
+  history.replaceState(null, '', '#' + encodeURIComponent(id));
+  renderList(); renderMain();
+}
+
+let curAudio = null;
+function stopAllAudio() {
+  if (curAudio) {
+    try { curAudio.pause(); curAudio.currentTime = 0; } catch (e) {}
+    curAudio = null;
+  }
+  if ('speechSynthesis' in window) {
+    try { speechSynthesis.cancel(); } catch (e) {}
+  }
+}
+async function speak(text, btn) {
+  if (!text) return;
+  stopAllAudio();
+  const rate = parseFloat(document.getElementById('speed').value);
+  const key = rate + '|' + text;
+  try {
+    if (btn) btn.disabled = true;
+    if (!(key in ttsCache)) ttsCache[key] = (await api('/api/tts', { text, rate })).b64 || '';
+  } catch (e) { ttsCache[key] = ''; }
+  finally { if (btn) btn.disabled = false; }
+  if (ttsCache[key]) {
+    const a = new Audio('data:audio/mp3;base64,' + ttsCache[key]);
+    curAudio = a;
+    a.onended = () => { if (curAudio === a) curAudio = null; };
+    a.play().catch(() => {});
+    return;
+  }
+  if (!('speechSynthesis' in window)) return;
+  const u = new SpeechSynthesisUtterance(text); u.lang = 'ja-JP'; u.rate = rate;
+  const v = speechSynthesis.getVoices().filter(v => v.lang.includes('ja'));
+  const pv = v.find(x => /Natural|Google|Nanami|Keita/.test(x.name)) || v[0]; if (pv) u.voice = pv;
+  speechSynthesis.speak(u);
+}
+function speakBtn(text, label = '🔊') { return `<button class="small" onclick="speak(${esc(JSON.stringify(text))}, this)">${label}</button>`; }
+
+function cloze(text, keywords) {
+  let html = esc(text);
+  [...keywords].sort((a, b) => b.length - a.length).forEach(k => {
+    const ek = esc(k);
+    const i = html.indexOf(ek);
+    if (i >= 0) html = html.slice(0, i) + `<span class="blank" onclick="this.classList.toggle('show')">${ek}</span>` + html.slice(i + ek.length);
+  });
+  return html;
+}
+
+function ctxHtml(q) {
+  const n = (BANK.ctxq_counts || {})[q.id] || 0;
+  const btn = n ? `<button class="small" id="ctxBtn" onclick="genCtx()" title="从题池里抽一个带公司背景（JD / 关注点）的问法；题池由 Claude 根据 02_企業別 的资料提前写好">🎲 加公司背景再问（题池 ${n}${COMPANY ? ' · 限' + esc(coObj() ? coObj().name : COMPANY) : ''}）</button>`
+    : `<span class="sub">🎲 这道题的背景题池还是空的（在和 Claude 的对话里说「补背景题」）</span>`;
+  if (!CTX || CTX.qid !== q.id) return btn;
+  return `<div class="cobar" style="border-left:3px solid var(--accent,#38bdf8);padding:8px 10px">
+    <div style="font-size:0.78rem;opacity:.8">🏢 ${esc(CTX.company)} 背景版（下面练习/批改会按这个问法来）${CTX.source === 'pool' ? ` · 题池 ${CTX.pool_size} 个里抽的，这个第 ${CTX.times_used} 次出现` : CTX.source === 'gemini' ? ' · Gemini 现场生成' : ''}</div>
+    <div class="qjp" style="margin-top:4px">${esc(CTX.question_jp)} ${speakBtn(CTX.question_jp, '🔊 听问题')}</div>
+    <div class="qcn">${esc(CTX.question_cn)}</div>
+    ${CTX.background_cn ? `<div style="font-size:0.82rem;margin-top:6px">📌 背景依据：${esc(CTX.background_cn)}</div>` : ''}
+    ${CTX.focus_cn ? `<div style="font-size:0.82rem">🎯 和通用答法相比：${esc(CTX.focus_cn)}</div>` : ''}
+    ${CTX.background_ok === false ? '<div style="font-size:0.78rem;opacity:.8">（资料里没读到具体背景，这次问法和通用版一样）</div>' : ''}
+    <div style="margin-top:6px"><button class="small" id="ctxBtn" onclick="genCtx()">🎲 换一家再抽</button> <button class="small" onclick="CTX=null; renderMain()">回到通用问法</button></div></div>`;
+}
+async function genCtx() {
+  const b = document.getElementById('ctxBtn'); if (b) { b.disabled = true; b.textContent = '⏳ 抽题中...'; }
+  try { const { item } = await api('/api/bank/ctxq', { id: CUR.id, folder: COMPANY ? (coObj() || {}).folder || '' : '' }); CTX = item; renderMain(); }
+  catch (e) { alert(e.message); renderMain(); }
+}
+
+function renderMain() {
+  const q = CUR, { t, kind } = tplOf(q), cur = stageOf(q.id), c = coObj();
+  let html = `<div class="qhead"><div><div class="qjp">${esc(q.question_jp)} ${speakBtn(q.question_jp, '🔊 听问题')}</div>
+      <div class="qcn">${esc(q.question_cn)} · 目标约 ${q.target_seconds || 45} 秒</div></div>
+      <div>${badge(q.id)}</div></div>
+    <div class="intent">🎯 面试官想确认：${esc(q.intent_cn)}</div>
+    <div class="ctxq" style="margin:10px 0">${ctxHtml(q)}</div>`;
+  if (kind === 'company') {
+    html += `<div class="cobar">🏢 这是「${esc(c.name)}」版。依据：${(t.material_files || []).length ? '02_企業別/' + esc(c.folder) + ' 里的 ' + t.material_files.map(esc).join('、') : ''}${c.memo ? (t.material_files || []).length ? ' + 你的备注' : '你的备注' : ''}。
+      ${t.materials_changed ? '<br>⟳ 公司资料或备注在生成之后改过，' : ''}${isStale(t, 'general') ? '<br>⟳ 个人素材在生成之后改过，' : ''}${isStale(t, 'company') ? '可以点下面「编辑模板 / 重新生成」更新。' : ''}</div>`;
+  } else if (kind === 'company-missing' && t) {
+    html += `<div class="cobar">🏢 「${esc(c.name)}」版还没生成，下面先显示通用版。
+      <button class="small primary" id="genCo" onclick="generateCompany('${q.id}')">📝 请 Claude 写「${esc(c.name)}」版</button></div>`;
+  } else if (kind === 'general' && isStale(t, 'general')) {
+    html += `<div class="notice warn" style="margin-top:10px">⟳ 这份模板是用旧版个人素材写的${t.edited ? '（你改过，请自己检查是否要更新）' : '，可以在下面「编辑模板 / 重新生成」更新'}。</div>`;
+  }
+  if (!t) {
+    html += `<div class="empty">这道题还没有模板。<br><br><button class="primary" id="genOne" onclick="generate('${q.id}')">📝 请 Claude 根据个人素材写模板</button>
+      <div class="sub" style="margin-top:8px">Claude 只用 个人素材.md 里的事实来写；缺的信息会用【要補足】空出来让你补。</div></div>`;
+    document.getElementById('main').innerHTML = html; return;
+  }
+  html += `<div class="tabs">${[1, 2, 3].map(s => `<button class="tab ${VIEW_STAGE === s ? 'on' : ''}" onclick="VIEW_STAGE=${s}; renderMain()">${s} ${BANK.stages[s]}${cur === s ? '<span class="cur">● 当前</span>' : ''}</button>`).join('')}
+    <span style="flex:1"></span>
+    <button class="small" onclick="setStage(1)" title="把这题的进度重置回第 1 阶段">进度重来</button>
+    ${cur < 4 ? `<button class="small" onclick="setStage(${Math.min(4, cur + 1)})" title="觉得已经会了，手动跳到下一阶段">跳到下一阶段</button>` : ''}</div>
+    <div class="howto">${STAGE_HOWTO[VIEW_STAGE]}</div>`;
+
+  if ((t.fill_in_slots_cn || []).length) {
+    html += `<div class="slot-warn">⚠️ 模板里有【要補足】的空，${kind === 'company' ? '资料' : '个人素材'}里缺这些信息：<br>• ${t.fill_in_slots_cn.map(esc).join('<br>• ')}<br>
+      <span style="font-size:0.78rem">${kind === 'company' ? '公司的信息补到公司资料或备注（顶部「✎ 编辑当前公司的资料」），你自己的信息补到 个人素材.md，' : '补到 06_日本語口語/个人素材.md 后，'}再点下面「重新生成」；或者直接点「编辑模板」自己填。</span></div>`;
+  }
+
+  const segs = (t.segments || []).length ? t.segments : [{ part: '全文', jp_clean: t.script_clean }];
+  const skel = t.skeleton || [];
+  if (VIEW_STAGE === 1) {
+    html += `<div style="display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap">${speakBtn(t.script_clean, '🔊 朗读全文')}
+      <button class="small" onclick="document.querySelectorAll('.cn.tr').forEach(e=>e.hidden=!e.hidden)">中文翻译 显示/隐藏</button>
+      <button class="small" onclick="document.getElementById('furi').hidden=!document.getElementById('furi').hidden">假名标注版</button></div>`;
+    html += segs.map(s => `<div class="seg"><div class="part"><span>${esc(s.part)}</span>${speakBtn(s.jp_clean)}</div><div class="jp">${esc(s.jp_clean)}</div></div>`).join('');
+    html += `<div class="cn tr" hidden style="margin-bottom:8px">${esc(t.script_cn || '')}</div>`;
+    html += `<div id="furi" hidden class="rblock" style="margin-bottom:8px">${esc(t.script_jp)}</div>`;
+  } else if (VIEW_STAGE === 2) {
+    html += segs.map(s => `<div class="seg" style="border-left-color:var(--st2)"><div class="part" style="color:var(--st2)">${esc(s.part)}</div><div class="jp">${cloze(s.jp_clean, t.cloze_keywords || [])}</div></div>`).join('');
+    html += `<div class="sub" style="margin-bottom:8px">要记住的关键词：${(t.cloze_keywords || []).length} 个 · <button class="small" onclick="document.querySelectorAll('.blank').forEach(b=>b.classList.add('show'))">全部显示</button></div>`;
+  } else {
+    html += `<details class="box" open><summary>结构提示（不想看可以收起来）</summary>
+      ${skel.map(s => `<div style="margin-top:6px"><b style="color:var(--st3)">${esc(s.part)}</b>：${esc(s.cn)}</div>`).join('')}</details>`;
+  }
+
+  html += `<details class="box"><summary>通用骨架（任何人都能套的结构）</summary>
+    ${skel.map(s => `<div style="margin-top:6px"><b>${esc(s.part)}</b>　${esc(s.jp)}<div class="cn">${esc(s.cn)}</div></div>`).join('')}</details>`;
+  if ((t.tips_cn || []).length) html += `<details class="box"><summary>注意点</summary>${t.tips_cn.map(x => `<div style="margin-top:4px">• ${esc(x)}</div>`).join('')}</details>`;
+  html += `<details class="box"><summary>编辑模板 / 请 Claude 重写</summary>
+    <div class="sub" style="margin:6px 0">可以把【要補足】换成你的真实信息，或改成你更顺口的说法。假名用全角括号写在汉字后面，例如 検証（けんしょう）。</div>
+    <textarea id="editBox" style="width:100%; height:160px">${esc(t.script_jp)}</textarea>
+    <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap"><button class="primary" onclick="saveEdit()">保存修改${kind === 'company' ? '（公司版）' : kind === 'company-missing' ? '（通用版）' : ''}</button>
+    <button onclick="${kind === 'company' ? `generateCompany('${q.id}', true)` : `generate('${q.id}', true)`}">📝 请 Claude 重写${kind === 'company' ? '公司版' : ''}</button>
+    <span class="sub">${t.edited ? '你改过 · ' + esc(t.edited_at || '') : '生成于 ' + esc(t.generated_at || '')}</span></div></details>`;
+
+  html += `<div class="answer"><div style="font-weight:700; margin-bottom:6px">🎙 ${VIEW_STAGE === 1 ? '念一遍给教练听' : '开口回答'}</div>
+    <div class="row">
+      <button class="mic" id="mic" onclick="toggleRec()">🎙️ 点击录音</button>
+      <button onclick="document.getElementById('file').click()" title="上传 .m4a/.mp3/.wav 录音">📂 传录音</button>
+      <input type="file" id="file" accept="audio/*,.m4a,.mp3,.wav,.webm" hidden onchange="upload(event)">
+      <textarea id="txt" placeholder="也可以直接打字（Ctrl+Enter 发送）"></textarea>
+      <button class="primary" onclick="sendText()">发送</button>
+    </div>
+    <div id="result" class="result"></div></div>`;
+  document.getElementById('main').innerHTML = html;
+  document.getElementById('txt').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) sendText(); });
+}
+
+async function _old_generate(id, force) {
+  if (force && !confirm('重新生成会覆盖现在的模板，确定吗？')) return;
+  const btn = document.getElementById('genOne');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 生成中（约 20–40 秒）...'; }
+  try { await api('/api/bank/generate', { id }); await load(id); }
+  catch (e) { alert('生成失败：' + e.message); if (btn) { btn.disabled = false; btn.textContent = '✨ 重试生成'; } }
+}
+
+async function _old_generateAll() {
+  const todo = BANK.questions.filter(q => !q.template);
+  if (!todo.length) { alert('所有题都已经有模板了。'); return; }
+  if (!confirm(`将为 ${todo.length} 道题生成模板，每题约 20–40 秒，可以边等边练已生成的题。开始吗？`)) return;
+  const btn = document.getElementById('genAllBtn'); btn.disabled = true;
+  let ok = 0, fail = 0;
+  for (const q of todo) {
+    btn.textContent = `⏳ 生成中 ${ok + fail + 1}/${todo.length}`;
+    try { await api('/api/bank/generate', { id: q.id }); ok++; } catch (e) { fail++; }
+    BANK = await api('/api/bank'); renderList();
+  }
+  btn.disabled = false; btn.textContent = '✨ 生成所有缺的模板';
+  alert(`完成：成功 ${ok}${fail ? `，失败 ${fail}（可以再点一次重试）` : ''}`);
+  if (CUR) select(CUR.id, true);
+}
+
+async function saveEdit() {
+  const { kind } = tplOf(CUR), script_jp = document.getElementById('editBox').value;
+  try {
+    if (kind === 'company') await api('/api/bank/company/save', { company: COMPANY, id: CUR.id, script_jp });
+    else await api('/api/bank/save', { id: CUR.id, script_jp });
+    await load(CUR.id); alert('已保存。');
+  } catch (e) { alert('保存失败：' + e.message); }
+}
+
+async function _old_regenStale() {
+  const todo = BANK.questions.filter(q => q.template && !q.template.edited && isStale(q.template, 'general'));
+  if (!todo.length || !confirm(`按新的个人素材重新生成 ${todo.length} 题的模板（每题约 20 秒；你改过的题不动）。开始吗？\n\n注意：重新生成后台本会变，已经背到一半的题要重新熟悉一下。`)) return;
+  const btn = document.getElementById('regenStaleBtn');
+  let ok = 0, fail = 0;
+  for (const q of todo) {
+    const b = document.getElementById('regenStaleBtn'); if (b) { b.disabled = true; b.textContent = `⏳ 更新中 ${ok + fail + 1}/${todo.length}`; }
+    try { await api('/api/bank/generate', { id: q.id }); ok++; } catch (e) { fail++; }
+  }
+  await load(CUR && CUR.id);
+  alert(`更新完成：成功 ${ok}${fail ? `，失败 ${fail}（可以再点一次重试）` : ''}`);
+}
+
+async function _old_generateCompany(id, force) {
+  if (force && !confirm('重新生成会覆盖现在的公司版模板，确定吗？')) return;
+  const btn = document.getElementById('genCo');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 生成中（约 20–40 秒）...'; }
+  try { await api('/api/bank/company/generate', { company: COMPANY, id }); await load(id); }
+  catch (e) { alert('生成失败：' + e.message); if (btn) { btn.disabled = false; btn.textContent = '✨ 重试生成'; } }
+}
+
+async function _old_generateCompanyAll() {
+  const c = coObj(); if (!c) return;
+  const todo = BANK.questions.filter(q => isCoQ(q.id) && (!(c.templates || {})[q.id] || (!c.templates[q.id].edited && isStale(c.templates[q.id], 'company'))));
+  const skipped = BANK.questions.filter(q => isCoQ(q.id) && (c.templates || {})[q.id] && c.templates[q.id].edited && isStale(c.templates[q.id], 'company'));
+  if (!todo.length) { alert(skipped.length ? '需要更新的题你都改过，不自动覆盖，请自己看一下。' : '这家公司的版本都是最新的。'); return; }
+  if (!confirm(`为「${c.name}」生成 ${todo.length} 题（每题约 20–40 秒）。开始吗？${skipped.length ? `\n你改过的 ${skipped.length} 题不会动。` : ''}`)) return;
+  let ok = 0, fail = 0, lastErr = '';
+  for (const q of todo) {
+    const b = document.getElementById('coAllBtn'); if (b) { b.disabled = true; b.textContent = `⏳ 生成中 ${ok + fail + 1}/${todo.length}`; }
+    try { await api('/api/bank/company/generate', { company: COMPANY, id: q.id }); ok++; } catch (e) { fail++; lastErr = e.message; }
+  }
+  await load(CUR && CUR.id);
+  alert(`完成：成功 ${ok}${fail ? `，失败 ${fail}：${lastErr}` : ''}`);
+}
+
+function renderCompanyForm(key) {
+  const c = key ? (BANK.companies || {})[key] : null;
+  const folders = BANK.company_folders || [];
+  CUR = null; renderList();
+  document.getElementById('main').innerHTML = `
+    <div class="qjp">${c ? '✎ 编辑公司资料：' + esc(c.name) : '＋ 新建公司版'}</div>
+    <div class="sub" style="margin-top:4px">只有标 🏢 的 ${(BANK.company_qids || []).length} 题（自我介绍、研究怎么用、志望动机、入社后想做什么、逆質問）会生成这家公司的版本；通用模板不会被改动。
+      公司的事实只取自下面的资料和备注，资料里没有的会用【要補足】空出来，不会替你编。</div>
+    <label class="f">公司名（页面上显示用）</label>
+    <input id="coName" style="width:100%" value="${esc(c ? c.name : '')}" placeholder="例如：〇〇化学" ${c ? 'disabled' : ''}>
+    <label class="f">资料文件夹（02_企業別/ 下；会读里面的调研笔记、面试准备等 .md/.txt，跳过简历和 cover letter）</label>
+    <select id="coFolder" style="width:100%"><option value="">（不用文件夹，只靠下面的备注）</option>
+      ${folders.map(f => `<option value="${esc(f)}" ${c && c.folder === f ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select>
+    <label class="f">公司备注（可选）：事业、产品、想去的部门/岗位、OB 访问听到的话、你被这家公司吸引的点……中文要点就行</label>
+    <textarea id="coMemo" style="width:100%; height:140px">${esc(c ? c.memo || '' : '')}</textarea>
+    <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap">
+      <button class="primary" onclick="saveCompany(${c ? `'${esc(key)}'` : ''})">${c ? '保存' : '建立并切换到这家公司'}</button>
+      <button onclick="load()">取消</button>
+      ${c ? `<span style="flex:1"></span><button class="small" onclick="deleteCompany('${esc(key)}')">删除这家公司版</button>` : ''}
+    </div>
+    <div class="sub" style="margin-top:8px">保存后在左边点「生成这家公司的版本」。资料或备注以后改了，页面会提示哪些公司版需要更新。</div>`;
+  document.getElementById('coFolder').addEventListener('change', e => {
+    const n = document.getElementById('coName'); if (!n.value.trim() && e.target.value) n.value = e.target.value.replace(/_miss$/, '');
+  });
+}
+
+async function saveCompany(key) {
+  const name = key ? BANK.companies[key].name : document.getElementById('coName').value.trim();
+  const folder = document.getElementById('coFolder').value, memo = document.getElementById('coMemo').value;
+  if (!name) { alert('请填公司名。'); return; }
+  if (!folder && !memo.trim()) { alert('资料文件夹和备注至少要有一个，不然 Gemini 没有依据可写。'); return; }
+  try {
+    const { company } = await api('/api/bank/company/upsert', { name, folder, memo });
+    COMPANY = company.key; try { localStorage.setItem('bank_company', COMPANY); } catch (e) {}
+    await load(); document.getElementById('main').innerHTML = `<div class="empty">已保存「${esc(name)}」。点左边「生成这家公司的版本」，或选一道标 🏢 的题。</div>`;
+  } catch (e) { alert('保存失败：' + e.message); }
+}
+
+async function deleteCompany(key) {
+  if (!confirm(`删除「${BANK.companies[key].name}」的公司版模板？（通用模板和练习记录不受影响）`)) return;
+  try { await api('/api/bank/company/delete', { company: key }); COMPANY = ''; try { localStorage.setItem('bank_company', ''); } catch (e) {} await load(); document.getElementById('main').innerHTML = '<div class="empty">已删除。</div>'; }
+  catch (e) { alert('删除失败：' + e.message); }
+}
+
+async function setStage(s) {
+  try { await api('/api/bank/stage', { id: CUR.id, stage: s }); BANK = await api('/api/bank'); VIEW_STAGE = Math.min(3, s); select(CUR.id, true); }
+  catch (e) { alert('操作失败：' + e.message); }
+}
+
+async function toggleRec() {
+  const btn = document.getElementById('mic');
+  if (!recording) {
+    stopAllAudio();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      rec = new MediaRecorder(stream); chunks = [];
+      rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+      rec.onstop = () => { stream.getTracks().forEach(t => t.stop()); const mime = rec.mimeType || 'audio/webm'; sendBlob(new Blob(chunks, { type: mime }), mime); };
+      rec.start(); recording = true; btn.classList.add('rec'); btn.textContent = '⏹ 说完了，点这里发送';
+    } catch (e) { alert('无法使用麦克风：' + e.message); }
+  } else { rec.stop(); recording = false; btn.classList.remove('rec'); btn.textContent = '🎙️ 点击录音'; }
+}
+function sendBlob(blob, mime) {
+  const r = new FileReader();
+  r.onloadend = () => submit({ audio_b64: r.result.split(',')[1], audio_mime: mime, user_text: document.getElementById('txt').value });
+  r.readAsDataURL(blob);
+}
+function upload(ev) {
+  const f = ev.target.files[0]; if (!f) return;
+  let mime = f.type || 'audio/mp4';
+  if (f.name.endsWith('.m4a')) mime = 'audio/mp4'; else if (f.name.endsWith('.mp3')) mime = 'audio/mp3'; else if (f.name.endsWith('.wav')) mime = 'audio/wav';
+  sendBlob(f, mime); ev.target.value = '';
+}
+function sendText() { const t = document.getElementById('txt').value.trim(); if (t) submit({ user_text: t }); }
+
+let lastPayload = null;
+async function submit(extra) {
+  const qid = CUR.id, stage = VIEW_STAGE;
+  lastPayload = { id: qid, stage, ...(tplOf(CUR).kind === 'company' ? { company: COMPANY } : {}), ...((CTX && CTX.qid === qid) ? { ctx_question: CTX.question_jp, ctx_company: CTX.company } : {}), ...extra };
+  const box = document.getElementById('result');
+  box.innerHTML = '<div class="loading">⏳ 教练正在听和批改（录音一般要 30–90 秒）...</div>';
+  try {
+    const { result: r } = await api('/api/bank/practice', lastPayload);
+    document.getElementById('txt').value = '';
+    BANK = await api('/api/bank'); renderList();
+    renderResult(r, stage);
+  } catch (e) {
+    box.innerHTML = `<div class="err">⚠️ 批改失败${extra.audio_b64 ? '（录音已保留）' : ''}：${esc(e.message)}</div><div><button class="primary" onclick="retry()">🔁 原样重试</button></div>`;
+  }
+}
+async function retry() { if (lastPayload) { const { id, stage, company, ...extra } = lastPayload; VIEW_STAGE = stage; await submit(extra); } }
+
+function scoreColor(v) { return v >= 8 ? 'var(--success)' : v >= 6 ? 'var(--warning)' : 'var(--danger)'; }
+function renderResult(r, stage) {
+  const labels = { grammar: '语法', keigo: '敬语', logic: '逻辑', fluency: '流畅', pronunciation: '发音' };
+  const sc = r.scores || {};
+  const chips = Object.keys(labels).filter(k => typeof sc[k] === 'number' || (sc[k] && !isNaN(+sc[k]))).map(k => `<span class="chip" style="color:${scoreColor(+sc[k])}; border-color:${scoreColor(+sc[k])}">${labels[k]} ${sc[k]}</span>`).join('');
+  const status = r.stage_status || {};
+  let html = '';
+  if (r.ready_for_next_stage) {
+    html += `<div class="pass">✅ 这一阶段通过了！${status.stage === 4 ? '这道题已经掌握 🎉' : `已进入第 ${status.stage} 阶段「${BANK.stages[status.stage] || ''}」。`}
+      ${status.stage && status.stage <= 3 ? `<button class="small" style="margin-left:8px" onclick="VIEW_STAGE=${status.stage}; renderMain()">去下一阶段 →</button>` : ''}</div>`;
+  }
+  html += `<div class="rblock"><h3>评分</h3>${chips || '—'}<div style="margin-top:4px">${esc(r.one_line_progress_cn || '')}</div></div>`;
+  html += `<div class="rblock"><h3>你说的（转写）</h3><div>${esc(r.user_transcript || '')}</div></div>`;
+  if ((r.point_check || []).length) html += `<div class="rblock"><h3>每部分有没有说到</h3>${r.point_check.map(p => `<div><span class="${p.covered ? 'ok' : 'ng'}">${p.covered ? '✔' : '✘'}</span> <b>${esc(p.part)}</b> <span class="why">${esc(p.note_cn || '')}</span></div>`).join('')}</div>`;
+  const curT = tplOf(CUR).t;
+  if (stage === 2 && curT) {
+    const all = curT.cloze_keywords || [], got = new Set(r.keywords_recalled || []);
+    html += `<div class="rblock"><h3>关键词：记住 ${all.filter(k => got.has(k)).length} / ${all.length}</h3>${all.map(k => `<span class="chip" style="color:${got.has(k) ? 'var(--success)' : 'var(--danger)'}; border-color:${got.has(k) ? 'var(--success)' : 'var(--danger)'}">${esc(k)}</span>`).join('')}</div>`;
+  }
+  if ((r.error_breakdown || []).length) html += `<div class="rblock"><h3>逐处修改</h3>${r.error_breakdown.map(e => `<div style="margin-bottom:6px"><div class="bad">${esc(e.original_part)}</div><div class="good">${esc(e.fixed_part)}</div><div class="why">${esc(e.reason_cn)}</div></div>`).join('')}</div>`;
+  if ((r.pronunciation_issues || []).length) html += `<div class="rblock"><h3>发音</h3>${r.pronunciation_issues.map(u => `<div><span class="bad">${esc(u.heard_as)}</span> → <span class="good">${esc(u.target_word)}</span> <span class="why">${esc(u.tip_cn)}</span></div>`).join('')}</div>`;
+  if (r.own_words_version_jp) html += `<div class="rblock"><h3>保留你自己说法的修改版 ${speakBtn(r.own_words_version_clean || r.own_words_version_jp)}</h3><div style="font-size:1rem">${esc(r.own_words_version_jp)}</div></div>`;
+  if (r.next_stage_advice_cn) html += `<div class="rblock"><h3>下一遍注意</h3><div>${esc(r.next_stage_advice_cn)}</div></div>`;
+  document.getElementById('result').innerHTML = html;
+}
+
+load().catch(e => { document.getElementById('qlist').innerHTML = `<div class="err">读取题库失败：${esc(e.message)}</div>`; });
+
+// 模板改由 Claude 在对话里写（2026-11-14）：按钮只负责把要说的话复制到剪贴板
+function askClaude(what) {
+  const msg = `写模板：${what}`;
+  try { navigator.clipboard.writeText(msg); } catch (e) {}
+  alert(`模板改由 Claude 在对话里写（网页不再调 Gemini）。\n\n请在和 Claude 的对话里说：\n「${msg}」\n\n（已尝试复制到剪贴板）`);
+}
+function qcn(id) { const q = BANK.questions.find(x => x.id === id); return q ? `${q.question_cn}（${id}）` : id; }
+async function generate(id) { askClaude(qcn(id)); }
+async function generateAll() {
+  const todo = BANK.questions.filter(q => !q.template);
+  if (!todo.length) { alert('所有题都已经有模板了。想改哪题，在对话里跟 Claude 说「写模板：题目」。'); return; }
+  askClaude(todo.map(q => q.id).join('、'));
+}
+async function regenStale() {
+  const todo = BANK.questions.filter(q => q.template && !q.template.edited && isStale(q.template, 'general'));
+  askClaude(`个人素材更新了，按新素材更新 ${todo.map(q => q.id).join('、')}`);
+}
+async function generateCompany(id) { const c = coObj(); askClaude(`${c ? c.name : COMPANY} 公司版 ${qcn(id)}`); }
+async function generateCompanyAll() { const c = coObj(); if (c) askClaude(`${c.name} 公司版（${(BANK.company_qids || []).join('、')}）`); }
+</script>
+</body>
+</html>
