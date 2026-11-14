@@ -18,6 +18,7 @@ import hashlib
 import http.server
 import json
 import os
+import random
 import re
 import socket
 import socketserver
@@ -1651,19 +1652,74 @@ async function startOpeningQuestion() {
     renderDailyPushOpening(true);
     return;
   }
-  await dispatchChat({
-    user_text: "（面接セッション開始：設定されたシナリオに基づき、面接官として最初の質問をゆっくり明瞭なビジネス日本語で投げかけてください）",
-    is_opening: true,
-    drill_same: false
-  });
+  chatHistory = [];
+  document.getElementById('chatScroll').innerHTML = '';
+  await openFromBank(true);
 }
 
 async function askNextQuestion() {
-  await dispatchChat({
-    user_text: "（今の質問の反復練習は完了しました。私のこれまでの回答を踏まえて、面接官として次の深掘り質問、または新しい面接質問を1つ投げかけてください）",
-    is_opening: true,
-    drill_same: false
-  });
+  await openFromBank(false);
+}
+
+// 开场题和「下一题」都从题库抽（Claude 在对话里写好的通用题模板 + 背景题），不调 Gemini
+let shownOpeningIds = [];
+async function openFromBank(fresh) {
+  const chatScroll = document.getElementById('chatScroll');
+  let it;
+  try {
+    const res = await fetch('/api/opening', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ exclude: shownOpeningIds })
+    });
+    const d = await res.json();
+    if (!res.ok || d.error) throw new Error(d.error || res.statusText);
+    it = d.item;
+  } catch (e) {
+    chatScroll.insertAdjacentHTML('beforeend', `<div class="bubble ai"><div class="jp-text">⚠️ 抽题失败：${escapeHtml(String(e.message || e))}</div></div>`);
+    return;
+  }
+  if (it.recycled) shownOpeningIds = [];
+  shownOpeningIds.push(it.id);
+  const sample = it.model_answer_clean_jp || '';
+  if (fresh) chatHistory = [];
+  chatHistory.push({ role: 'model', text: it.question_jp, rewrites: { exec: '', polite: '', sample } });
+  const blindClass = document.getElementById('blindModeToggle').checked ? 'blurred' : '';
+  const msgId = 'msg-bank-' + Date.now();
+  const sk = Array.isArray(it.skeleton) ? it.skeleton : [];
+  const skHtml = sk.length ? `<div style="margin-bottom:6px; color:#e2e8f0;"><b>📋 回答骨架：</b>${sk.map(x => escapeHtml(typeof x === 'string' ? x : (x.jp || x.label || JSON.stringify(x)))).join(' → ')}</div>` : '';
+  chatScroll.insertAdjacentHTML('beforeend', `
+    <div class="bubble ai">
+      <div class="bubble-meta">
+        <span>🎯 ${escapeHtml(it.source_cn || '面试题库')}（题库 ${it.pool_size} 题，本轮还剩 ${it.remaining} 题没抽过 · 0 Gemini）</span>
+        <div style="display:flex; gap:6px;">
+          <button class="small-btn" onclick="speakJapanese('${escapeJs(it.question_jp)}')">🔊 朗读提问</button>
+          <button class="small-btn secondary" onclick="toggleReveal('${msgId}')">👁️ 显字/译文</button>
+        </div>
+      </div>
+      <div id="${msgId}-jp" class="jp-text ${blindClass}" onclick="toggleReveal('${msgId}')">${escapeHtml(it.question_jp)}</div>
+      <div id="${msgId}-hint" class="hint-box visible">
+        <div style="color:#94a3b8;"><b>【中文译文】</b> ${escapeHtml(it.question_cn || '')}</div>
+        ${it.background_cn ? `<div style="color:#94a3b8; margin-top:3px;"><b>📌 背景依据：</b>${escapeHtml(it.background_cn)}</div>` : ''}
+        ${it.intent_cn ? `<div style="color:#94a3b8; margin-top:3px;"><b>🎯 考察点：</b>${escapeHtml(it.intent_cn)}</div>` : ''}
+      </div>
+      ${sample ? `
+      <div style="margin-top:10px; padding:10px 12px; background:#111c35; border:1px solid #1d4ed8; border-radius:8px; font-size:0.86rem;">
+        ${skHtml}
+        <details>
+          <summary style="cursor:pointer; color:#34d399; font-weight:600;">🌟 卡壳了？点此看示范回答（照着读不会被批改挑错）</summary>
+          ${it.sample_note_cn ? `<div style="margin-top:6px; color:#fbbf24; font-size:0.8rem;">${escapeHtml(it.sample_note_cn)}</div>` : ''}
+          <div style="margin-top:6px; color:#f1f5f9; line-height:1.65;">${escapeHtml(it.model_answer_jp || sample)}</div>
+          ${it.model_answer_cn ? `<div style="margin-top:4px; color:#94a3b8; font-size:0.78rem;">【中文】${escapeHtml(it.model_answer_cn)}</div>` : ''}
+          <div style="margin-top:6px; display:flex; gap:8px;">
+            <button class="small-btn" onclick="speakJapanese('${escapeJs(sample)}')">🔊 朗读示范</button>
+            <button class="small-btn secondary" onclick="saveToAccum('${escapeJs(sample)}', '题库示范回答', this)">➕ 存入积累库</button>
+          </div>
+        </details>
+      </div>` : ''}
+    </div>
+  `);
+  chatScroll.scrollTop = chatScroll.scrollHeight;
+  if (fresh) speakJapanese(it.question_jp);
 }
 
 const pendingRetries = {};
@@ -2494,6 +2550,58 @@ CTXQ_PROMPT = """あなたは日本企業の面接官役です。〔CANDIDATE〕
 CTXQ_ANGLES = ["事業・製品", "募集職種の業務内容", "求める人物像・社風", "技術・研究テーマ", "キャリア・成長環境", "課題・今後の方向性"]
 
 
+# ---------------------------------------------------------------------------
+# 场景 A～D 的开场题：从题库抽（通用题模板 + 背景题池，都是 Claude 在对话里写的），不调 Gemini
+# ---------------------------------------------------------------------------
+def build_opening_pool() -> list:
+    bank = load_bank()
+    general = {q["id"]: q for q in bank.get("questions", []) if q.get("template")}
+    company_tpls = {k: v.get("templates", {}) for k, v in load_company_bank().get("companies", {}).items()}
+    pool = []
+    for qid, q in general.items():
+        t = q["template"]
+        pool.append({
+            "id": f"bank:{qid}", "kind": "general", "qid": qid,
+            "question_jp": q.get("question_jp", ""), "question_cn": q.get("question_cn", ""),
+            "intent_cn": q.get("intent_cn", ""), "source_cn": "面试题库 · 通用题",
+            "model_answer_jp": t.get("script_jp", ""), "model_answer_clean_jp": t.get("script_clean", ""),
+            "model_answer_cn": t.get("script_cn", ""), "skeleton": t.get("skeleton", []),
+            "sample_note_cn": "通用版示范：【要補足】的地方换成具体公司的内容再说。" if "要補足" in t.get("script_clean", "") else "",
+        })
+    data = load_ctxq()
+    lang = data.get("company_lang", {})
+    for it in data.get("pool", []):
+        if lang.get(it.get("company"), "ja") != "ja" or it.get("qid") not in general:
+            continue
+        ctpl = company_tpls.get(it.get("company"), {}).get(it["qid"])
+        t = ctpl or general[it["qid"]]["template"]
+        pool.append({
+            "id": f"ctx:{it.get('id')}", "kind": "context", "qid": it["qid"], "company": it.get("company", ""),
+            "question_jp": it.get("question_jp", ""), "question_cn": it.get("question_cn", ""),
+            "intent_cn": it.get("focus_cn", ""), "background_cn": it.get("background_cn", ""),
+            "source_cn": f"背景题 · {it.get('company', '')}",
+            "model_answer_jp": t.get("script_jp", ""), "model_answer_clean_jp": t.get("script_clean", ""),
+            "model_answer_cn": t.get("script_cn", ""), "skeleton": t.get("skeleton", []),
+            "sample_note_cn": ("这家公司的公司版示范。" if ctpl else
+                               "下面是这道题的通用版示范，背景题要按上面的「背景依据」把公司的具体内容说进去。"),
+        })
+    return pool
+
+
+def pick_opening(exclude=()) -> dict:
+    pool = build_opening_pool()
+    if not pool:
+        raise ValueError("题库还是空的：请在和 Claude 的对话里说「写模板」或「补背景题」。")
+    fresh = [it for it in pool if it["id"] not in set(exclude)]
+    recycled = not fresh
+    cand = fresh or pool
+    # 通用题和背景题各一半机会，免得 53 道背景题把 20 道通用题挤掉
+    kinds = [k for k in ("general", "context") if any(it["kind"] == k for it in cand)]
+    kind = random.choice(kinds)
+    it = random.choice([x for x in cand if x["kind"] == kind])
+    return {**it, "pool_size": len(pool), "remaining": max(len(fresh) - 1, 0), "recycled": recycled}
+
+
 def load_ctxq() -> dict:
     if not CTXQ_JSON.exists():
         return {"items": []}
@@ -3120,6 +3228,13 @@ class CoachRequestHandler(http.server.BaseHTTPRequestHandler):
                 return
             path_str = append_to_accum_md(jp, cn)
             self._send_json({"message": f"已追加至 {path_str}"})
+            return
+
+        if self.path == "/api/opening":
+            try:
+                self._send_json({"item": pick_opening(data.get("exclude") or [])})
+            except ValueError as e:
+                self._send_json({"error": str(e)}, status=400)
             return
 
         if self.path == "/api/chat":
