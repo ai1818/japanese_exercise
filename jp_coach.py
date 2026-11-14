@@ -1217,6 +1217,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
   </div>
   <div class="api-bar">
     <a href="/bank" style="color:#0b1120; background:var(--accent); padding:6px 12px; border-radius:6px; font-weight:700; font-size:0.86rem; text-decoration:none;">📚 面试题库</a>
+    <a href="/interview" style="color:#0b1120; background:#fbbf24; padding:6px 12px; border-radius:6px; font-weight:700; font-size:0.86rem; text-decoration:none;">🎯 面试单元</a>
     <a href="/scenes" style="color:#0b1120; background:#34d399; padding:6px 12px; border-radius:6px; font-weight:700; font-size:0.86rem; text-decoration:none;">🗣 生活场景</a>
     <a href="/progress" target="_blank" style="color:#0b1120; background:var(--success); padding:6px 12px; border-radius:6px; font-weight:700; font-size:0.86rem; text-decoration:none;">📈 我的进步 & 问题</a>
     <span id="epBadge" class="badge">正在检测密钥...</span>
@@ -2812,8 +2813,71 @@ def load_scenes() -> list:
     return out
 
 
+INTERVIEW_DIR = SPEAKING_DIR / "面试单元"
+
+
+def load_interview_units() -> list:
+    """面试单元 day_NN.json（Claude 在对话里写）。结构同生活场景，另有 day / kind=interview。"""
+    out = []
+    if INTERVIEW_DIR.exists():
+        for fp in sorted(INTERVIEW_DIR.glob("day_*.json")):
+            try:
+                u = json.loads(fp.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as e:
+                log_error(f"interview {fp.name}", str(e))
+                continue
+            u.setdefault("day", int(re.sub(r"\D", "", fp.stem) or 0))
+            u.setdefault("id", f"iv_day{u['day']:02d}")
+            u["kind"] = "interview"
+            u["status"] = "active"
+            out.append(u)
+    return sorted(out, key=lambda x: x["day"])
+
+
+def interview_checkins() -> dict:
+    """{day: [打卡记录…]}，读所有电脑的 _checkins_<电脑名>.jsonl（只追加，两台电脑不冲突）。"""
+    out = {}
+    if INTERVIEW_DIR.exists():
+        for fp in sorted(INTERVIEW_DIR.glob("_checkins_*.jsonl")):
+            for line in fp.read_text(encoding="utf-8", errors="ignore").splitlines():
+                try:
+                    r = json.loads(line)
+                    out.setdefault(int(r["day"]), []).append(r)
+                except (ValueError, KeyError, TypeError):
+                    continue
+    return out
+
+
+def interview_progress() -> dict:
+    ck = interview_checkins()
+    current = max(ck, default=0) + 1
+    units = load_interview_units()
+    today = datetime.date.today().isoformat()
+    return {
+        "current_day": current,
+        "checked_days": sorted(ck),
+        "checked_today": any(r.get("at", "")[:10] == today for rs in ck.values() for r in rs),
+        "current_unit_ready": any(u["day"] == current for u in units),
+        "last_checkin": max((r.get("at", "") for rs in ck.values() for r in rs), default=""),
+    }
+
+
+def interview_checkin(day: int) -> dict:
+    prog = interview_progress()
+    if day != prog["current_day"]:
+        raise ValueError(f"现在该打卡的是 Day {prog['current_day']}，不是 Day {day}。")
+    if not any(u["day"] == day for u in load_interview_units()):
+        raise ValueError(f"Day {day} 的单元还没写。")
+    INTERVIEW_DIR.mkdir(parents=True, exist_ok=True)
+    rec = {"day": day, "at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "machine": MACHINE}
+    with (INTERVIEW_DIR / f"_checkins_{MACHINE}.jsonl").open("a", encoding="utf-8") as f:
+        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    _trigger_bg_sync()
+    return interview_progress()
+
+
 def _find_scene(sid: str) -> dict:
-    for s in load_scenes():
+    for s in (load_interview_units() if str(sid).startswith("iv_") else load_scenes()):
         if s.get("id") == sid:
             return s
     raise KeyError(f"没有这个场景：{sid}")
@@ -2888,6 +2952,82 @@ SCENE_FINISH_PROMPT = """あなたは日本語会話のコーチです。中国�
 """
 
 
+INTERVIEW_TURN_PROMPT = """あなたは日本企業の面接官役兼、面接日本語のコーチです。ユーザーは〔CANDIDATE〕で、技術職の面接を練習しています。
+
+{context}
+
+【面接官としてのルール】
+- 実際の日本企業の面接官が話すような、丁寧で自然な話し方。1回の発話は短く（1〜3文）、一度に1つだけ質問する。
+- ユーザーの答えの中身（具体例・数字・理由・自分の役割）に踏み込んで深掘りする。答えが曖昧なら「具体的には？」と聞き返す。
+- `npc.jp` には面接官が実際に声に出すセリフだけを書く（ト書き・状況説明は書かない。TTSが読み上げるため）。
+- 目標の深掘りが一通り終わったら、締めの一言を言って scene_done=true にする。
+
+【コーチとしてのルール】
+- ユーザーの今回の発言だけを短く評価する。面接でそのまま通じる自然な丁寧語なら ok=true、fixes は空でよい。
+- 直すのは「文法の誤り・言い間違い・失礼・書き言葉すぎて口頭で浮く・中国語直訳」だけ。正しい表現を「もっと良い言い方」に格上げしない。fixes は最大2つ。
+- 単元の「示範対話」「表現」と同じ言い方をユーザーが使ったら、それは正解として扱う（直さない）。
+- better は面接で実際に口に出す丁寧な話し言葉（1文最長60字、「の」の連続は2つまで、名詞化より動詞）。
+
+次のJSONで出力（純粋なJSONのみ）：
+{{
+  "user_transcript": "ユーザーの今回の発言の書き起こし（音声の場合。文字入力ならそのまま）",
+  "feedback": {{"ok": true, "fixes": [{{"original": "問題の部分", "better": "自然な言い方", "reason_cn": "中文理由（一句）"}}], "tip_cn": "（任意）这一句可以更好的一点，中文，一句话以内；没有就空"}},
+  "npc": {{"jp": "面接官の次の発話", "cn": "中文翻译"}},
+  "curveball_used": "今回「追加の深掘り」を入れたなら、その situation の中国語。入れていなければ空",
+  "scene_done": false
+}}
+"""
+
+INTERVIEW_FINISH_PROMPT = """あなたは面接日本語のコーチです。〔CANDIDATE〕が、技術職面接のロールプレイを終えました。会話全体を見て総評してください。
+
+{context}
+
+【会話の記録】
+{transcript}
+
+【会話中にすでに出した指摘】
+{fixes}
+
+【総評のルール】
+- 基準は「日本企業の技術面接で、そのまま口に出して自然に通じるか」。丁寧な話し言葉（です・ます、自然な謙譲語）を正解とする。書き言葉・公文調に言い換えない。
+- 会話中の指摘と矛盾させない（会話中に問題なしとした表現を、ここで直さない）。単元の示範対話・表現と同じ言い方も直さない。
+- review_phrases は面接でそのまま言える短い文（1文最長60字）。
+- logic は「質問の意図に答え、具体例・数字・自分の役割で裏付けられたか」。途中で終えた場合は、そこまでの質も考慮する。
+
+次のJSONで出力（純粋なJSONのみ）：
+{{
+  "scores": {{"grammar": 1〜10, "keigo": 1〜10, "logic": "質問に具体的に答えられたか 1〜10", "fluency": 1〜10, "pronunciation": "音声の発言があれば 1〜10、なければ null"}},
+  "goal_achieved": true,
+  "problem_tags": ["見られた問題のみ、次のIDから最大4つ: {problem_tag_ids}"],
+  "good_points_cn": ["做得好的地方，1〜2 条"],
+  "review_phrases": [{{"jp": "この質問で覚えておくと良い自然な言い方（ユーザーが言えなかった・不自然だったものを優先）", "cn": "中文"}}],
+  "one_line_progress_cn": "一句话中文总评"
+}}
+"""
+
+INTERVIEW_PHRASE_CHECK_PROMPT = """あなたは面接日本語・発音のコーチです。〔CANDIDATE〕が、面接単元「{scene_title}」の表現練習で、中国語の提示を見て自分で日本語を声に出して（または入力して）言ってみました。
+
+【言いたい内容（中国語）】{target_cn}
+【参考の自然な表現（面接で口に出す版）】{target_jp}
+
+【判定ルール】
+- 参考表現と一字一句同じである必要はありません。日本企業の面接でそのまま自然に通じる丁寧な話し言葉なら ok=true。
+- 書き言葉すぎる（論文・ES調）・失礼・文法の誤りがあれば ok=false にして、口頭で言う形を better_jp に書く。
+- 次のJSONのみを出力（純粋なJSONのみ）：
+{{
+  "user_transcript": "ユーザーの発言の忠実な書き起こし（言い淀みや発音ミスも含める）",
+  "ok": true,
+  "verdict_cn": "一句话中文点评",
+  "better_jp": "ユーザーの言い方を活かした自然な修正版（そのままで自然なら空文字）",
+  "pronunciation_tip_cn": "（音声の場合）発音・アクセント・長音・促音の注意点があれば中国語で1文。問題なければ空文字"
+}}
+"""
+
+
+def _is_interview(scene: dict) -> bool:
+    return scene.get("kind") == "interview"
+
+
 def _scene_audio_parts(user_text: str, audio_b64: str, audio_mime: str) -> list:
     if audio_b64:
         return [{"inlineData": {"mimeType": audio_mime, "data": audio_b64}},
@@ -2904,7 +3044,7 @@ def _history_text(history: list) -> str:
 def scene_turn(sid: str, part: str, curveballs: list, history: list, user_text: str = "", audio_b64: str = "", audio_mime: str = "audio/webm") -> dict:
     cfg = load_config()
     scene = _find_scene(sid)
-    system = SCENE_TURN_PROMPT.format(context=_scene_context(scene, part, curveballs))
+    system = (INTERVIEW_TURN_PROMPT if _is_interview(scene) else SCENE_TURN_PROMPT).format(context=_scene_context(scene, part, curveballs))
     parts = [{"text": "【ここまでの会話】\n" + _history_text(history)}] + _scene_audio_parts(user_text, audio_b64, audio_mime)
     payload = {
         "systemInstruction": {"parts": [{"text": system}]},
@@ -2938,12 +3078,15 @@ SCENE_PHRASE_CHECK_PROMPT = """あなたは日本語の日常会話・発音コ�
 
 def scene_phrase_check(sid: str, target_cn: str, target_jp: str, user_text: str = "", audio_b64: str = "", audio_mime: str = "audio/webm") -> dict:
     cfg = load_config()
-    scene_title = ""
+    scene_title, tmpl = "", SCENE_PHRASE_CHECK_PROMPT
     try:
-        scene_title = _find_scene(sid).get("title", sid)
+        sc = _find_scene(sid)
+        scene_title = sc.get("title", sid)
+        if _is_interview(sc):
+            tmpl = INTERVIEW_PHRASE_CHECK_PROMPT
     except Exception:
         scene_title = sid or "日常生活"
-    system = SCENE_PHRASE_CHECK_PROMPT.format(
+    system = tmpl.format(
         scene_title=scene_title,
         target_cn=target_cn,
         target_jp=target_jp,
@@ -2964,7 +3107,7 @@ def scene_phrase_check(sid: str, target_cn: str, target_jp: str, user_text: str 
 def scene_finish(sid: str, part: str, curveballs: list, history: list, fixes: list, audio_used: bool = False) -> dict:
     cfg = load_config()
     scene = _find_scene(sid)
-    system = SCENE_FINISH_PROMPT.format(
+    system = (INTERVIEW_FINISH_PROMPT if _is_interview(scene) else SCENE_FINISH_PROMPT).format(
         context=_scene_context(scene, part, curveballs),
         transcript=_history_text(history),
         fixes="\n".join(f"- {f.get('original', '')} → {f.get('better', '')}" for f in fixes or []) or "（なし）",
@@ -2981,8 +3124,9 @@ def scene_finish(sid: str, part: str, curveballs: list, history: list, fixes: li
     append_session_record({
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "machine": MACHINE,
-        "scenario": "scene",
+        "scenario": "interview_unit" if _is_interview(scene) else "scene",
         "scene_id": sid,
+        **({"interview_day": scene.get("day")} if _is_interview(scene) else {}),
         "scene_part": part,
         "model": cfg.get("GEMINI_MODEL", ""),
         "question": f"{scene.get('title')}／{rp.get('title', part)}",
@@ -3005,10 +3149,15 @@ def scene_part_stats() -> dict:
     """每个场景每一段「任务完成」的次数：{scene_id: {part: n}}（给角色扮演自动开启意外情况用）"""
     out = {}
     for r in load_all_records():
-        if r.get("scenario") == "scene" and r.get("goal_achieved") and r.get("scene_id") and r.get("scene_part"):
+        if r.get("scenario") in ("scene", "interview_unit") and r.get("goal_achieved") and r.get("scene_id") and r.get("scene_part"):
             d = out.setdefault(r["scene_id"], {})
             d[r["scene_part"]] = d.get(r["scene_part"], 0) + 1
     return out
+
+
+def interview_page() -> str:
+    fp = APP_DIR / "interview.html"
+    return fp.read_text(encoding="utf-8") if fp.exists() else "<h1>interview.html 缺失</h1>"
 
 
 def scenes_page() -> str:
@@ -3106,6 +3255,15 @@ class CoachRequestHandler(http.server.BaseHTTPRequestHandler):
                 self._send_json({"error": str(e)}, status=500)
         elif path.startswith("/scenes"):
             self._send_html(scenes_page())
+        elif path.startswith("/interview"):
+            self._send_html(interview_page())
+        elif path.startswith("/api/interview"):
+            try:
+                self._send_json({"units": load_interview_units(), "progress": interview_progress(),
+                                 "part_stats": scene_part_stats()})
+            except Exception as e:
+                log_error("GET /api/interview", str(e))
+                self._send_json({"error": str(e)}, status=500)
         elif path.startswith("/api/scenes"):
             try:
                 self._send_json({"scenes": load_scenes(), "part_stats": scene_part_stats()})
@@ -3230,6 +3388,13 @@ class CoachRequestHandler(http.server.BaseHTTPRequestHandler):
             self._send_json({"message": f"已追加至 {path_str}"})
             return
 
+        if self.path == "/api/interview/checkin":
+            try:
+                self._send_json({"progress": interview_checkin(int(data.get("day", 0)))})
+            except ValueError as e:
+                self._send_json({"error": str(e)}, status=400)
+            return
+
         if self.path == "/api/opening":
             try:
                 self._send_json({"item": pick_opening(data.get("exclude") or [])})
@@ -3348,7 +3513,8 @@ def _apply_local_profile() -> None:
         "〔CANDIDATE_LIFE〕": p["candidate_life"],
         "〔RESEARCH_HINT〕": p["research_hint"],
     }
-    for name in ("SYSTEM_PROMPT_TEMPLATE", "TEMPLATE_PROMPT", "CTXQ_PROMPT", "SCENE_TURN_PROMPT"):
+    for name in ("SYSTEM_PROMPT_TEMPLATE", "TEMPLATE_PROMPT", "CTXQ_PROMPT", "SCENE_TURN_PROMPT",
+                 "INTERVIEW_TURN_PROMPT", "INTERVIEW_FINISH_PROMPT", "INTERVIEW_PHRASE_CHECK_PROMPT"):
         text = globals()[name]
         for k, v in subs.items():
             text = text.replace(k, v.replace("{", "{{").replace("}", "}}"))

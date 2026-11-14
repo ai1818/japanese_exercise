@@ -167,7 +167,7 @@ def run_sync() -> int:
     changed = 0
 
     # 1. 应用代码与前端页面双向同步
-    for fname in ("jp_coach.py", "bank.html", "scenes.html", "progress.html", "manage_life_scenes.py", "sync_onedrive.py", "README.md", ".gitignore", "local_profile.json"):
+    for fname in ("jp_coach.py", "bank.html", "scenes.html", "interview.html", "progress.html", "manage_life_scenes.py", "sync_onedrive.py", "README.md", ".gitignore", "local_profile.json"):
         changed += sync_two_way(LOCAL_APP_DIR / fname, ONEDRIVE_APP_DIR / fname, append_only=False)
 
     # 2. 单向拉取外部源数据（OneDrive -> 本地 data/）
@@ -298,10 +298,21 @@ def run_sync() -> int:
     ]:
         changed += sync_two_way(LOCAL_DATA_ROOT / rel, ONEDRIVE_ROOT / rel, append_only=is_append)
 
+    # 面试单元 day_NN.json（Claude 在对话里写）双向；打卡记录 _checkins_<电脑名>.jsonl 在下面按只追加同步
+    iv = Path("06_日本語口語/面试单元")
+    try:
+        (LOCAL_DATA_ROOT / iv).mkdir(parents=True, exist_ok=True)
+        names = {fp.name for d in (LOCAL_DATA_ROOT / iv, ONEDRIVE_ROOT / iv) if d.exists() for fp in d.glob("day_*.json")}
+        for name in sorted(names):
+            changed += sync_two_way(LOCAL_DATA_ROOT / iv / name, ONEDRIVE_ROOT / iv / name, append_only=False)
+    except OSError as e:
+        log(f"同步 {iv} 失败: {e}")
+
     # coach_sessions/*.jsonl 及 coach_sessions/bank_stage/*.jsonl
     for rel_sub in [
         Path("06_日本語口語/記録/coach_sessions"),
         Path("06_日本語口語/記録/coach_sessions/bank_stage"),
+        Path("06_日本語口語/面试单元"),
     ]:
         l_dir = LOCAL_DATA_ROOT / rel_sub
         r_dir = ONEDRIVE_ROOT / rel_sub
