@@ -129,6 +129,23 @@ async function api(path, body) {
 
 // ---------- 朗读 ----------
 let stopPlay = false, curAudio = null, curResolve = null;
+// 整页只用一个 <audio>：第一次在点击里「解锁」后，之后在 await 之后再 play() 手机浏览器也不会拦
+const PLAYER = new Audio();
+let audioUnlocked = false;
+function silentWavUrl() {
+  const n = 800, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+  const w = (o, str) => [...str].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 8000, true);
+  v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true);
+  for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+}
+function unlockAudio() {  // 必须在点击事件里、任何 await 之前调用
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  try { PLAYER.src = silentWavUrl(); const pr = PLAYER.play(); if (pr) pr.catch(() => { audioUnlocked = false; }); } catch (e) { audioUnlocked = false; }
+}
 function stripStageNotes(text) {
   return String(text ?? '')
     .replace(/（[^）]*）|\([^)]*\)/g, '')
@@ -160,12 +177,30 @@ function resolveVoice(who = 'staff') {
   if (mode === 'nanami' || mode === 'keita') return mode;
   return (who === 'doctor' || who === 'driver' || who === 'manager' || who === 'me') ? 'keita' : 'nanami';
 }
+const ttsPending = {};
 async function getAudio(text, who = 'staff') {
   const spoken = stripStageNotes(text);
   if (!spoken) return '';
   const rate = parseFloat(document.getElementById('speed').value), voice = resolveVoice(who), key = voice + '|' + rate + '|' + spoken;
-  if (!(key in ttsCache)) { try { ttsCache[key] = (await api('/api/tts', { text: spoken, rate, voice })).b64 || ''; } catch (e) { ttsCache[key] = ''; } }
-  return ttsCache[key];
+  if (ttsCache[key]) return ttsCache[key];
+  if (!ttsPending[key]) {
+    ttsPending[key] = (async () => {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const b64 = (await api('/api/tts', { text: spoken, rate, voice })).b64 || '';
+          if (b64) { ttsCache[key] = b64; return b64; }
+        } catch (e) {}
+        await new Promise(r => setTimeout(r, 700));
+      }
+      return '';  // 失败不写缓存，下次点还会重新请求
+    })().finally(() => { delete ttsPending[key]; });
+  }
+  return ttsPending[key];
+}
+function prefetchAudio(items, concurrency = 2) {  // items: [{text, who}]；后台慢慢取，不影响当前播放
+  const queue = items.slice();
+  const worker = async () => { while (queue.length) { const it = queue.shift(); try { await getAudio(it.text, it.who); } catch (e) {} } };
+  for (let i = 0; i < concurrency; i++) worker();
 }
 function playText(text, who = 'staff') {
   const spoken = stripStageNotes(text);
@@ -194,13 +229,16 @@ function playText(text, who = 'staff') {
     const b64 = await getAudio(spoken, who);
     if (stopPlay || finished) { done(); return; }
     if (b64) {
-      const a = new Audio('data:audio/mp3;base64,' + b64);
+      const a = PLAYER;
+      a.onended = a.onerror = null;
+      a.src = 'data:audio/mp3;base64,' + b64;
       curAudio = a;
       a.onended = () => { if (curAudio === a) curAudio = null; done(); };
       a.onerror = () => { if (curAudio === a) curAudio = null; done(); };
-      a.play().catch(() => { if (curAudio === a) curAudio = null; done(); });
+      a.play().catch(err => { console.warn('play() 被拦截', err); if (curAudio === a) curAudio = null; done(); });
       return;
     }
+    console.warn('这句语音没取到，改用浏览器自带语音：', spoken);
     if (!('speechSynthesis' in window)) { done(); return; }
     const u = new SpeechSynthesisUtterance(spoken); u.lang = 'ja-JP'; u.rate = parseFloat(document.getElementById('speed').value);
     const v = speechSynthesis.getVoices().filter(v => v.lang.includes('ja')); const pv = v.find(x => /Natural|Google|Nanami|Keita/.test(x.name)) || v[0]; if (pv) u.voice = pv;
@@ -208,6 +246,7 @@ function playText(text, who = 'staff') {
   });
 }
 async function speak(text, btn, who = 'staff') {
+  unlockAudio();
   stopPlay = false;
   if (btn) btn.disabled = true;
   await playText(text, who);
@@ -217,11 +256,13 @@ function speakBtn(text, label = '🔊', who = 'staff') {
   return `<button class="small" onclick="speak(${esc(JSON.stringify(text))}, this, ${esc(JSON.stringify(who))})">${label}</button>`;
 }
 async function playPart(pi, btn) {
+  unlockAudio();
   stopAllAudio();
   stopPlay = false;
   btn.disabled = true;
   const els = document.querySelectorAll(`[data-part="${pi}"] .bubble`);
   const lines = CUR.parts[pi].lines;
+  prefetchAudio(lines.map(l => ({ text: l.jp, who: l.who })));  // 一开始就把整段都取起来，后面的句子不用等
   for (let i = 0; i < lines.length && !stopPlay; i++) {
     if (els[i]) { els[i].classList.add('playing'); els[i].scrollIntoView({ block: 'nearest' }); }
     await playText(lines[i].jp, lines[i].who);
@@ -273,6 +314,7 @@ async function load() {
 function selectScene(id) {
   stopAllAudio();
   CUR = SCENES.find(s => s.id === id); RP = null;
+  if (CUR) prefetchAudio(CUR.parts.flatMap(p => p.lines.map(l => ({ text: l.jp, who: l.who }))), 1);
   history.replaceState(null, '', '#' + encodeURIComponent(id));
   renderSceneList();
   render();
@@ -501,6 +543,7 @@ function pickCurveballs(part) {
   return pool.slice(0, pool.length >= 2 && Math.random() < 0.5 ? 2 : 1);
 }
 function startRoleplay(part) {
+  unlockAudio();
   stopAllAudio();
   const p = CUR.parts.find(x => x.id === part);
   const first = p.lines.find(l => l.who !== 'me');
@@ -572,6 +615,7 @@ function bindInput() {
 }
 
 async function toggleRec() {
+  unlockAudio();
   const btn = document.getElementById('mic');
   if (!recording) {
     stopAllAudio();
@@ -585,7 +629,7 @@ async function toggleRec() {
     } catch (e) { alert('无法使用麦克风：' + e.message); }
   } else { rec.stop(); recording = false; btn.classList.remove('rec'); btn.textContent = '🎙️ 点击录音'; }
 }
-function sendText() { const t = document.getElementById('txt').value.trim(); if (t) turn({ user_text: t }); }
+function sendText() { unlockAudio(); const t = document.getElementById('txt').value.trim(); if (t) turn({ user_text: t }); }
 
 async function turn(extra) {
   lastPayload = { scene: CUR.id, part: RP.part, curveballs: RP.curveballs, history: RP.history.map(({ role, jp }) => ({ role, jp })), ...extra };

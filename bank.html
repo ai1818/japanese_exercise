@@ -245,8 +245,8 @@ async function speak(text, btn) {
   const key = rate + '|' + text;
   try {
     if (btn) btn.disabled = true;
-    if (!(key in ttsCache)) ttsCache[key] = (await api('/api/tts', { text, rate })).b64 || '';
-  } catch (e) { ttsCache[key] = ''; }
+    if (!ttsCache[key]) { const b = (await api('/api/tts', { text, rate })).b64 || ''; if (b) ttsCache[key] = b; }  // 失败不缓存
+  } catch (e) {}
   finally { if (btn) btn.disabled = false; }
   if (ttsCache[key]) {
     const a = new Audio('data:audio/mp3;base64,' + ttsCache[key]);

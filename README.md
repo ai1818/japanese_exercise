@@ -34,6 +34,8 @@
   - 文件按 mtime 比较新旧；日志和台账这类文件按「只追加」合并。
   - 遇到 OneDrive 未就绪的文件就跳过，下次巡检再补。
   - 代码、本 README 和 `.gitignore` 也会双向同步到 OneDrive 的 `05_ツール/speaking_coach/`。
+- **`check_updates.py`**：列出网页上标注了、或资料更新了、需要 Claude 在对话里处理的事项（生活场景待 Archive、面试单元下一个 Day 没写、模板过时、新公司没分语言、上次检查后更新过的资料）；`--mark` 记下检查点。
+- **`pregen_tts.py`**：把面试单元和生活场景的台词提前生成成语音，存进 `data/tts_cache/`（默认音色、0.9x 语速）；网页点播放时直接读缓存。写完新单元/场景后跑一次（可只传 id）。
 - **`manage_life_scenes.py`**：管理生活场景的状态和安装。
   - 场景状态按 `active` → `marked_archive`（在网页上标记）→ `archived`（移进 `生活场景/archive/`）流转。
   - 子命令：`status`、`archive-marked`、`validate <新场景.json>`。

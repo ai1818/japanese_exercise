@@ -1255,7 +1255,6 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
     <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
       <select id="scenarioSelect" style="flex:1;" onchange="onScenarioChange()">
-        <option value="daily_push">🔥 场景 0：06_日本語口語「今日推送」实战对练（套用当日 3 个公式模板 + 追问）</option>
         <option value="chem_rd">〔LABEL_chem_rd〕</option>
         <option value="it_ai_ds">〔LABEL_it_ai_ds〕</option>
         <option value="quant_finance">〔LABEL_quant_finance〕</option>
@@ -1358,6 +1357,7 @@ async function initConfig() {
   document.getElementById('modelSelect').value = data.model || 'gemini-3.8-flash';
   latestPushData = data.latest_push;
   const urlScenario = new URLSearchParams(window.location.search).get('scenario');
+  if (urlScenario === 'daily_push') { location.href = '/interview'; return; }  // 旧邮件里的链接：每日练习已改到面试单元
   if (urlScenario && document.querySelector(`#scenarioSelect option[value="${urlScenario}"]`)) {
     document.getElementById('scenarioSelect').value = urlScenario;
   }
@@ -1563,10 +1563,8 @@ async function speakJapanese(text, b64Mp3 = "", voice = "keita") {
         body: JSON.stringify({ text, rate, voice })
       });
       const data = await res.json();
-      ttsCache[cacheKey] = data.b64 || '';
-    } catch (e) {
-      ttsCache[cacheKey] = '';
-    }
+      if (data.b64) ttsCache[cacheKey] = data.b64;  // 失败不缓存，下次点还会重新请求
+    } catch (e) {}
   }
   if (ttsCache[cacheKey]) {
     const audio = new Audio("data:audio/mp3;base64," + ttsCache[cacheKey]);
@@ -1933,13 +1931,6 @@ function renderCritique(r) {
         <div style="display:flex; gap:6px;">
           <button class="small-btn" onclick="speakJapanese('${escapeJs(execClean || politeClean)}')">🔊 慢速跟读</button>
           <button class="small-btn secondary" onclick="saveToAccum('${escapeJs(execClean || politeClean)}', '照着说版（原话：${escapeJs(r.user_transcript || '')}）', this)">➕ 积累库</button>
-        </div>
-      </div>
-
-      <div style="margin:8px 0 12px 0; padding:8px 10px; background:#064e3b33; border:1px solid #059669; border-radius:7px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <span style="font-size:0.8rem; color:#a7f3d0;">📬 <b>邮件台账联动：</b>对这轮回答满意后，点右侧按钮即可锁定为今日定稿并解锁明日新课</span>
-        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-          <button class="small-btn" style="background:#059669; border-color:#10b981; font-weight:700;" onclick="lockDailyToLedger('${cardId}', 'exec', this)">✅ 锁定「照着说版」写入台账${dayNum ? ' (Day ' + dayNum + ')' : ''}</button>
         </div>
       </div>
 
@@ -3406,7 +3397,7 @@ class CoachRequestHandler(http.server.BaseHTTPRequestHandler):
             cfg = load_config()
             api_key = cfg.get("GEMINI_API_KEY", "")
             model = data.get("model") or cfg.get("GEMINI_MODEL", "gemini-3.8-flash")
-            scenario = data.get("scenario", "daily_push")
+            scenario = data.get("scenario", "chem_rd")
             custom_context = data.get("custom_context", "")
             history = data.get("history", [])
             user_text = data.get("user_text", "")
