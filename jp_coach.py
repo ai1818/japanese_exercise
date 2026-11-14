@@ -557,7 +557,7 @@ SYSTEM_PROMPT_TEMPLATE = """あなたは日本のトップ企業・研究機関�
 
 【最重要：口語スタイル原則と「自己矛盾の完全禁止」（すべての書き換え・模範解答・添削に適用）】
 ユーザーが練習しているのは「日本の技術面接で実際に口に出して自然に話す丁寧な日本語」です。
-1. 1文は短く（目安40〜50字以内）、1文に1つの内容。「〜し、〜し、〜であり、」と長くつながない。
+1. 1文は短く（目安40〜50字、最長60字）、1文に1つの内容。「〜し、〜し、〜であり、」と長くつながない。名詞の「の」は2つまで、「〜の低下」「〜の解明」より「下がる」「突き止める」のように動詞で言う。「極めて」「〜をはじめとする」「〜であり」「常に〜を見据え」のような文章語も口頭では使わない。
 2. 面接で自然に使える丁寧な話し言葉を基準にする：
    - ✕ 避けるべき極端な書き言葉・公文調：「〜にございます／〜にございました」「〜てまいる所存です」「遺憾なく発揮」「〜および」「貴社（口頭では御社）」
    - ○ 推奨する面接の自然な敬体：「〜でした」「〜に貢献したいと考えています」「〜に取り組みました／挑戦しました／検証しました」「中心になって進めました／主導しました」「御社（おんしゃ）」「〜をもとに／〜を踏まえて」
@@ -566,7 +566,12 @@ SYSTEM_PROMPT_TEMPLATE = """あなたは日本のトップ企業・研究機関�
    - ユーザーが「直前のターンであなた（コーチ）が提示した `executive_keigo_rewrite` / `polite_colleague_rewrite` / `next_answer_template`」や「今日推送の公式テンプレート・模範解答」の表現を参考にして話した場合、**その表現を「書き言葉すぎる」「硬すぎる」「くだけすぎ／幼稚」と批判して別の言い方に変えさせることは絶対禁止**です！
    - 例：前のターンであなたが「安い材料」「文献調べ」「挑戦しました」「強くございます」等を提示していた場合、またはユーザーが「安価な材料」「文献調査」「主導し」「検証いたしました」等の自然な技術面接表現を使った場合、それを error_breakdown で減点・修正してはいけません。
    - 2回目以降の言い直し（リトライ）では、ユーザーが前回の添削スクリプトをほぼ再現できていれば `error_breakdown` は空配列 `[]`（または本当に残っている文法ミス・助詞落ちのみ）にし、語彙の好みの揺れで毎回違う書き換えを押し付けないでください。
-   - `polite_colleague_rewrite`（カジュアル面談・同僚ディスカッション版）でも、技術面接で減点されるようなくだけすぎた語（「安い」「文献調べ」等）は使わず、「安価な」「文献調査」等の自然な技術用語に統一してください。
+   - 会話履歴の【システム記録】にある「満点示範」は、ユーザーが読み上げ用に受け取った見本です。ユーザーがそれを読んだ場合、その表現は正解として扱い、別の言い方に直さないこと。
+5. 【添削は「本当の問題」だけ】
+   - error_breakdown に入れてよいのは：文法・助詞・活用の誤り、言い間違い（意味が変わる語の誤用）、明らかに不自然な表現、書き言葉すぎて口頭に向かない表現、中国語直訳。
+   - **正しく自然な表現を「もっと良い言い方」に格上げする添削は禁止**。例：「研究を行っています」「〜にこだわってきました」「〜を使って」は面接でそのまま通じる正しい日本語なので直さない（「研究に取り組んでおります」への言い換えを押し付けない）。
+   - 言いよどみ・言い直し・読み間違い（例：「機械かが学習」）は発音の問題なので unclear_pronunciations にだけ書き、error_breakdown には重複して書かない。
+   - 直すところがなければ error_breakdown は空配列 [] でよい。
 
 【あなたのタスク】
 ユーザーが音声またはテキストで発言します（日本語の途中で分からない単語を中国語や英語で混ぜて話す場合もあります）。
@@ -601,9 +606,9 @@ SYSTEM_PROMPT_TEMPLATE = """あなたは日本のトップ企業・研究機関�
       "reason_cn": "💡 问题诊断与修改意见（指出是助词搭配错误、敬语变形错误、太随便的口语词、书面语过重不像口语、中式直译，还是缺少PREP逻辑衔接）"
     }}
   ],
-  "polite_colleague_rewrite": "カジュアル面談・社内の技術ディスカッションで話す版。です・ます調の自然な話し言葉、短い文で（難読漢字にはカッコでひらがなを付す）",
-  "polite_colleague_clean": "polite_colleague_rewriteからカッコ内のふりがなを除いた音声読み上げ用テキスト",
-  "executive_keigo_rewrite": "面接本番（役員面接を含む）でそのまま口に出せる版。丁寧だが話し言葉で、PREPの順に短い文で。謙譲語は口語スタイル原則3の範囲に留め、書き言葉の硬い表現は使わない（難読漢字にはカッコでひらがなを付す）",
+  "polite_colleague_rewrite": "",
+  "polite_colleague_clean": "",
+  "executive_keigo_rewrite": "【照着说版・1本だけ】ユーザー自身の回答をベースに、error_breakdown で指摘した箇所と、60字を超える長い文の分割だけを直した版（内容・言い回しはできるだけユーザーの原話のまま。正しい表現を別の言い方に替えない。新しい修飾や文章語を足さない）。そのまま面接で口に出せる丁寧な話し言葉（難読漢字にはカッコでひらがなを付す）。polite_colleague_rewrite は使わないので空文字列にする",
   "executive_keigo_clean": "executive_keigo_rewriteからカッコ内のふりがなを除いた音声読み上げ用テキスト",
   "critique_cn": "用简体中文总结整体修改思路（1. 结构逻辑是否符合PREP；2. 若处于『今日推送』模式，是否自然套用了当天的3个思维公式模板；3. 下一次重说本句时最该注意的1个重点）。",
   "key_vocab": [
@@ -631,7 +636,7 @@ SYSTEM_PROMPT_TEMPLATE = """あなたは日本のトップ企業・研究機関�
     "p_conclusion": "【P・結論（第1文の型）】いま投げかけた質問（または現在練習中の質問）に対して、ユーザーがそのまま穴埋めして話し始められる開口テンプレート",
     "re_evidence": "【R/E・理由と具体例（第2〜3文の型）】ユーザーの実際の研究（〔RESEARCH_HINT〕）をどう当てはめるかの穴埋め骨格",
     "p_closing": "【P・結びと貢献（最終文の型）】話を綺麗に締めるテンプレート",
-    "model_answer_jp": "【模範解答フルスクリプト（ふりがな付き）】45秒程度で話せる自然な満点回答例。口語スタイル原則を厳守し、実際の面接で人が話すリズムの短い文で（難読漢字にはカッコでひらがなを付す）",
+    "model_answer_jp": "【模範解答フルスクリプト（ふりがな付き）】45秒程度で話せる自然な満点回答例。口語スタイル原則を厳守し、実際の面接で人が話すリズムの短い文で（1文最長60字、難読漢字にはカッコでひらがなを付す）。ユーザーはこれを読み上げ練習に使うので、後で自分が添削しても直さない表現だけで書く",
     "model_answer_clean_jp": "model_answer_jpからカッコ内のふりがなを除いた純粋な日本語テキスト（音声読み上げ用）"
   }}
 }}
@@ -817,12 +822,19 @@ def call_gemini_api(
     for turn in history[-8:]:
         role = "user" if turn.get("role") == "user" else "model"
         text = turn.get("text", "")
-        if role == "model" and turn.get("rewrites"):
+        rw = turn.get("rewrites") or {}
+        if role == "model" and any(rw.get(k) for k in ("exec", "polite", "sample")):
+            lines = []
+            if rw.get("exec"):
+                lines.append(f"・照着说版: {rw['exec']}")
+            if rw.get("polite"):
+                lines.append(f"・面談版: {rw['polite']}")
+            if rw.get("sample"):
+                lines.append(f"・満点示範（ユーザーが読み上げ用に受け取った見本）: {rw['sample']}")
             text += (
-                f"\n\n【※システム記録：このターンであなた（コーチ）がユーザーに提示した模範書き換え】\n"
-                f"・面接本番版: {turn['rewrites'].get('exec', '')}\n"
-                f"・面談版: {turn['rewrites'].get('polite', '')}\n"
-                f"（※次のユーザー発言がこの模範書き換えに沿っている場合、あなた自身が推奨した表現を『硬すぎる』『くだけすぎ』等と自己矛盾して批判することは厳禁です。前回の書き換え案を可能な限り維持し、発音や残りの明確な文法ミスのみチェックしてください）"
+                "\n\n【※システム記録：このターンであなた（コーチ）がユーザーに提示した模範書き換え・見本】\n"
+                + "\n".join(lines)
+                + "\n（※次のユーザー発言がこれらに沿っている場合、あなた自身が提示した表現を『硬すぎる』『くだけすぎ』『もっと良い言い方がある』等と自己矛盾して直すことは厳禁です。発音と、本当に残っている文法ミスのみチェックしてください）"
             )
         if text:
             contents.append({"role": role, "parts": [{"text": text}]})
@@ -1731,7 +1743,8 @@ async function dispatchChat(payload) {
       text: r.reply_jp,
       rewrites: {
         exec: r.executive_keigo_rewrite || '',
-        polite: r.polite_colleague_rewrite || ''
+        polite: r.polite_colleague_rewrite || '',
+        sample: (r.next_answer_template || {}).model_answer_clean_jp || (r.next_answer_template || {}).model_answer_jp || ''
       }
     });
     const blindClass = document.getElementById('blindModeToggle').checked ? 'blurred' : '';
@@ -1857,30 +1870,19 @@ function renderCritique(r) {
 
       ${errList ? '<h3 style="margin-top:12px;">3. ❌ 逐处错误指出与具体修改意见</h3>' + errList : ''}
 
-      <h3 style="margin-top:12px;">4. ✨ 整句重构版本（建议慢速跟读 2 遍后再按录音键重说本题）</h3>
-      <div style="font-size:0.8rem; color:var(--muted); margin-top:4px;">【面谈/技术讨论版（です・ます 口语）】</div>
-      <div class="rewrite-jp">
-        <span>${escapeHtml(r.polite_colleague_rewrite || '')}</span>
-        <div style="display:flex; gap:6px;">
-          <button class="small-btn" onclick="speakJapanese('${escapeJs(politeClean)}')">🔊 慢速跟读</button>
-          <button class="small-btn secondary" onclick="saveToAccum('${escapeJs(politeClean)}', '面谈/技术讨论版（原话：${escapeJs(r.user_transcript || '')}）', this)">➕ 积累库</button>
-        </div>
-      </div>
-
-      <div style="font-size:0.8rem; color:var(--muted);">【面试本番版（礼貌的口语，可以直接照着说）】</div>
+      <h3 style="margin-top:12px;">4. ✨ 照着说的版本（在你原话上只改了上面指出的地方，慢速跟读 2 遍再重说）</h3>
       <div class="rewrite-jp exec">
-        <span>${escapeHtml(r.executive_keigo_rewrite || '')}</span>
+        <span>${escapeHtml(r.executive_keigo_rewrite || r.polite_colleague_rewrite || '')}</span>
         <div style="display:flex; gap:6px;">
-          <button class="small-btn" onclick="speakJapanese('${escapeJs(execClean)}')">🔊 慢速跟读</button>
-          <button class="small-btn secondary" onclick="saveToAccum('${escapeJs(execClean)}', '面试本番版（原话：${escapeJs(r.user_transcript || '')}）', this)">➕ 积累库</button>
+          <button class="small-btn" onclick="speakJapanese('${escapeJs(execClean || politeClean)}')">🔊 慢速跟读</button>
+          <button class="small-btn secondary" onclick="saveToAccum('${escapeJs(execClean || politeClean)}', '照着说版（原话：${escapeJs(r.user_transcript || '')}）', this)">➕ 积累库</button>
         </div>
       </div>
 
       <div style="margin:8px 0 12px 0; padding:8px 10px; background:#064e3b33; border:1px solid #059669; border-radius:7px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
         <span style="font-size:0.8rem; color:#a7f3d0;">📬 <b>邮件台账联动：</b>对这轮回答满意后，点右侧按钮即可锁定为今日定稿并解锁明日新课</span>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
-          <button class="small-btn" style="background:#059669; border-color:#10b981; font-weight:700;" onclick="lockDailyToLedger('${cardId}', 'exec', this)">✅ 锁定「面试本番版」写入台账${dayNum ? ' (Day ' + dayNum + ')' : ''}</button>
-          <button class="small-btn secondary" onclick="lockDailyToLedger('${cardId}', 'polite', this)">锁定「面谈版」</button>
+          <button class="small-btn" style="background:#059669; border-color:#10b981; font-weight:700;" onclick="lockDailyToLedger('${cardId}', 'exec', this)">✅ 锁定「照着说版」写入台账${dayNum ? ' (Day ' + dayNum + ')' : ''}</button>
         </div>
       </div>
 
