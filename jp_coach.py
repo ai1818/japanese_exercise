@@ -199,6 +199,8 @@ def parse_daily_push_md(md_text: str, filename: str = "") -> dict:
             ("示范例句", "example_ja"),
             ("例句中译", "example_zh"),
             ("举例讲解", "example_note_cn"),
+            ("书面版（ES）", "example_es_ja"),
+            ("书面→口头改了什么", "spoken_note_cn"),
         ):
             m_sub = re.search(rf"^\s*-\s*\*\*{label}\*\*[:：]\s*(.+)$", blk, re.M)
             if m_sub:
@@ -262,7 +264,7 @@ def parse_daily_push_md(md_text: str, filename: str = "") -> dict:
                 lj_tmps = lj.get("templates") or []
                 if len(lj_tmps) == len(info["templates"]):
                     for idx, lt in enumerate(lj_tmps):
-                        for k in ("name", "timing_tense", "function", "template_furigana", "detail_cn", "example_ja", "example_zh", "example_note_cn"):
+                        for k in ("name", "timing_tense", "function", "template_furigana", "detail_cn", "example_ja", "example_zh", "example_note_cn", "example_es_ja", "spoken_note_cn"):
                             if lt.get(k) and not info["templates"][idx].get(k):
                                 info["templates"][idx][k] = lt[k]
                 elif lj_tmps and not info["templates"]:
@@ -1428,11 +1430,13 @@ function renderDailyPushOpening(playAudio = false) {
       ${t.example_ja ? `
         <div style="margin-top:5px; padding-top:5px; border-top:1px dashed #334155; font-size:0.8rem;">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:6px;">
-            <span style="color:#6ee7b7; line-height:1.55;">💡 <b>示范例句：</b>${escapeHtml(t.example_ja)}</span>
+            <span style="color:#6ee7b7; line-height:1.55;">🗣 <b>口头版例句：</b>${escapeHtml(t.example_ja)}</span>
             <button class="small-btn secondary" onclick="speakJapanese('${escapeJs(t.example_ja)}')">🔊 朗读例句</button>
           </div>
           ${t.example_zh ? `<div style="color:#94a3b8; font-size:0.76rem; margin-top:2px;">中译：${escapeHtml(t.example_zh)}</div>` : ''}
           ${t.example_note_cn ? `<div style="color:#fbbf24; font-size:0.76rem; margin-top:2px;">🧩 <b>填槽举例讲解：</b>${escapeHtml(t.example_note_cn)}</div>` : ''}
+          ${t.example_es_ja ? `<div style="color:#94a3b8; font-size:0.76rem; margin-top:4px;">📝 <b>书面版（ES 写法，看懂即可）：</b>${escapeHtml(t.example_es_ja)}</div>` : ''}
+          ${t.spoken_note_cn ? `<div style="color:#fda4af; font-size:0.76rem; margin-top:2px;">✂️ <b>书面→口头改了什么：</b>${escapeHtml(t.spoken_note_cn)}</div>` : ''}
         </div>
       ` : ''}
     </div>
