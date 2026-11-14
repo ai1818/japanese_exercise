@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>今日面板</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-title" content="口语私教台">
+<style>
+  :root {
+    --bg: #0f172a; --panel: #1e293b; --panel2: #0b1120; --border: #334155;
+    --text: #f1f5f9; --muted: #94a3b8; --accent: #38bdf8;
+    --success: #34d399; --warning: #fbbf24; --danger: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", "Meiryo", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6; padding: 14px 16px 30px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 16px; }
+  h1 { font-size: 1.2rem; }
+  h2 { font-size: 0.85rem; color: var(--muted); font-weight: 600; margin: 18px 0 8px; }
+  .sub { font-size: 0.82rem; color: var(--muted); }
+  .nav { display: flex; gap: 8px; flex-wrap: wrap; }
+  a.btn { font-size: 0.85rem; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--text); padding: 6px 12px; text-decoration: none; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 10px; }
+  .today { border-color: #3b82f6; background: linear-gradient(135deg, #172554 0%, #1e293b 70%); }
+  .today.done { border-color: #10b981; background: linear-gradient(135deg, #064e3b 0%, #1e293b 70%); }
+  .today .day { font-size: 0.8rem; color: var(--accent); font-weight: 700; letter-spacing: 0.04em; }
+  .today .title { font-size: 1.25rem; font-weight: 700; margin: 2px 0 4px; }
+  .today ol { margin: 8px 0 0 20px; font-size: 0.86rem; color: #cbd5e1; }
+  .go { display: inline-block; margin-top: 12px; background: #2563eb; border: 1px solid #3b82f6; color: #fff; font-weight: 700; padding: 9px 18px; border-radius: 8px; text-decoration: none; }
+  .today.done .go { background: #059669; border-color: #10b981; }
+  .badge { display: inline-block; font-size: 0.74rem; padding: 1px 9px; border-radius: 99px; margin-left: 6px; vertical-align: middle; }
+  .b-done { background: #064e3b; color: #a7f3d0; border: 1px solid #10b981; }
+  .b-todo { background: #451a03; color: #fbbf24; border: 1px solid #d97706; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+  a.rv { display: block; text-decoration: none; color: var(--text); }
+  a.rv:hover .card { border-color: var(--accent); }
+  .rv .t { font-weight: 700; font-size: 0.95rem; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  @media (max-width: 560px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px; text-align: center; text-decoration: none; color: var(--text); display: block; }
+  .stat .n { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
+  .stat .l { font-size: 0.74rem; color: var(--muted); }
+  .more { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
+  .more a { display: block; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); text-decoration: none; font-size: 0.88rem; }
+  .more a:hover { border-color: var(--accent); }
+  .more .d { font-size: 0.74rem; color: var(--muted); }
+  .err { color: var(--danger); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>🏠 今日面板</h1><div class="sub" id="date"></div></div>
+    <div class="nav">
+      <a class="btn" href="/interview">🎯 面试单元</a>
+      <a class="btn" href="/scenes">🗣 生活场景</a>
+      <a class="btn" href="/progress">📈 进步页</a>
+    </div>
+  </header>
+  <div id="main"><div class="sub">读取中…</div></div>
+</div>
+<script>
+// 旧邮件 / 旧书签：/?scenario=xxx 原来指向自由对练页
+(() => {
+  const sc = new URLSearchParams(location.search).get('scenario');
+  if (sc === 'daily_push') location.replace('/interview');
+  else if (sc) location.replace('/practice?scenario=' + encodeURIComponent(sc));
+})();
+
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function todayCard(d) {
+  const p = d.progress, u = d.unit;
+  if (p.checked_today) {
+    return `<div class="card today done">
+      <div class="day">TODAY · 已完成</div>
+      <div class="title">✅ 今天已经打卡</div>
+      <div class="sub">${u ? `下一课 Day ${u.day}「${esc(u.title)}」已经准备好，明天继续。` : `下一课 Day ${p.current_day} 还没写：有空时在和 Claude 的对话里说「写 Day ${p.current_day}」。`}</div>
+      <a class="go" href="/interview">🎯 回去复习今天的单元</a>
+    </div>`;
+  }
+  if (!u) {
+    return `<div class="card today">
+      <div class="day">TODAY · 面试 Day ${p.current_day}</div>
+      <div class="title">这一课还没写</div>
+      <div class="sub">在和 Claude 的对话里说「写 Day ${p.current_day}」，写好后刷新这一页。在那之前，可以先复习下面推荐的内容。</div>
+      ${p.checked_days.length ? '<a class="go" href="/interview">🎯 复习已打卡的单元</a>' : ''}
+    </div>`;
+  }
+  return `<div class="card today">
+    <div class="day">TODAY · 面试 Day ${u.day}<span class="badge b-todo">还没打卡</span></div>
+    <div class="title">${esc(u.icon)} ${esc(u.title)}</div>
+    <div class="sub">${esc(u.subtitle)}</div>
+    ${(u.tasks_cn || []).length ? `<ol>${u.tasks_cn.map(t => `<li>${esc(t)}</li>`).join('')}</ol>` : ''}
+    <div class="sub" style="margin-top:8px">示范对话 → 单词与表达 → 表达自测 → 实战模拟，做完在总结里点「✅ 打卡」。</div>
+    <a class="go" href="/interview#${encodeURIComponent(u.id)}">▶ 开始今天的练习</a>
+  </div>`;
+}
+
+function reviewCards(d) {
+  if (!d.review.length) return '<div class="card sub">还没有可推荐的复习内容。</div>';
+  return `<div class="row">${d.review.map(r => `<a class="rv" href="${esc(r.url)}"><div class="card">
+      <div class="sub">${r.kind === 'scene' ? '🗣 生活场景' : '🎯 面试单元'} · ${esc(r.reason)}</div>
+      <div class="t">${esc(r.icon)} ${esc(r.title)}</div></div></a>`).join('')}</div>`;
+}
+
+function statsRow(d) {
+  const s = d.stats;
+  const cell = (n, l) => `<a class="stat" href="/progress"><div class="n">${n}</div><div class="l">${l}</div></a>`;
+  return `<div class="stats">
+    ${cell(s.streak, '连续打卡（天）')}
+    ${cell(s.checked, '面试单元已打卡')}
+    ${cell(s.week_sessions, '近 7 天练习次数')}
+    ${cell(s.recent_avg ?? '—', s.recent_n ? `最近 ${s.recent_n} 次平均分` : '还没有评分')}
+  </div>`;
+}
+
+async function load() {
+  const res = await fetch('/api/home');
+  const d = await res.json();
+  if (!res.ok || d.error) throw new Error(d.error || res.statusText);
+  document.getElementById('date').textContent = d.today;
+  document.getElementById('main').innerHTML = `
+    ${todayCard(d)}
+    <h2>📌 推荐复习</h2>${reviewCards(d)}
+    <h2>📈 进度</h2>${statsRow(d)}
+    <h2>🧰 其他练习</h2>
+    <div class="more">
+      <a href="/practice">💬 自由对练<div class="d">场景 A～D，从题库抽题，录音批改</div></a>
+      <a href="/bank">📚 面试题库<div class="d">20 道通用题，三阶闯关</div></a>
+      <a href="/scenes">🗣 生活场景<div class="d">药店、车站、区役所等</div></a>
+    </div>`;
+}
+load().catch(e => { document.getElementById('main').innerHTML = `<div class="card err">读取失败：${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>

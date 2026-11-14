@@ -1217,6 +1217,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
   </div>
   <div class="api-bar">
     <a href="/bank" style="color:#0b1120; background:var(--accent); padding:6px 12px; border-radius:6px; font-weight:700; font-size:0.86rem; text-decoration:none;">📚 面试题库</a>
+    <a href="/" style="color:#f1f5f9; background:#1e293b; border:1px solid #334155; padding:6px 12px; border-radius:6px; font-weight:700; font-size:0.86rem; text-decoration:none;">🏠 今日面板</a>
     <a href="/interview" style="color:#0b1120; background:#fbbf24; padding:6px 12px; border-radius:6px; font-weight:700; font-size:0.86rem; text-decoration:none;">🎯 面试单元</a>
     <a href="/scenes" style="color:#0b1120; background:#34d399; padding:6px 12px; border-radius:6px; font-weight:700; font-size:0.86rem; text-decoration:none;">🗣 生活场景</a>
     <a href="/progress" target="_blank" style="color:#0b1120; background:var(--success); padding:6px 12px; border-radius:6px; font-weight:700; font-size:0.86rem; text-decoration:none;">📈 我的进步 & 问题</a>
@@ -3146,6 +3147,85 @@ def scene_part_stats() -> dict:
     return out
 
 
+def _avg_score(r: dict):
+    sc = r.get("scores")
+    if isinstance(sc, str):
+        try:
+            import ast
+            sc = ast.literal_eval(sc)
+        except (ValueError, SyntaxError):
+            sc = None
+    vals = [float(v) for v in (sc or {}).values() if isinstance(v, (int, float)) or (isinstance(v, str) and v.replace(".", "", 1).isdigit())]
+    return round(sum(vals) / len(vals), 1) if vals else None
+
+
+def home_payload() -> dict:
+    """今日面板：今天的面试 Day、该复习的、进度小结。全部读本地数据，不调 Gemini。"""
+    prog = interview_progress()
+    units = {u["day"]: u for u in load_interview_units()}
+    cur = units.get(prog["current_day"])
+    records = load_all_records()
+    today = datetime.date.today()
+
+    # 连续打卡天数：从今天（今天没打就从昨天）往回数
+    ck_dates = {r.get("at", "")[:10] for rs in interview_checkins().values() for r in rs}
+    d = today if today.isoformat() in ck_dates else today - datetime.timedelta(days=1)
+    streak = 0
+    while d.isoformat() in ck_dates:
+        streak += 1
+        d -= datetime.timedelta(days=1)
+
+    # 复习推荐 1：最久没练的生活场景（没练过的最优先）
+    last_scene = {}
+    for r in records:
+        if r.get("scenario") == "scene" and r.get("scene_id"):
+            last_scene[r["scene_id"]] = max(last_scene.get(r["scene_id"], ""), r.get("timestamp", ""))
+    scenes = [sc for sc in load_scenes() if sc.get("status") != "archived"]
+    scenes.sort(key=lambda sc: last_scene.get(sc["id"], ""))
+    review = []
+    if scenes:
+        sc = scenes[0]
+        last = last_scene.get(sc["id"], "")
+        review.append({"kind": "scene", "id": sc["id"], "icon": sc.get("icon", ""), "title": sc.get("title", ""),
+                       "reason": f"最久没练（上次 {last[:10]}）" if last else "还没练过", "url": f"/scenes#{sc['id']}"})
+
+    # 复习推荐 2：打过卡的面试单元里，最近一次实战模拟分数最低的
+    latest_iv = {}
+    for r in records:
+        if r.get("scenario") == "interview_unit" and r.get("interview_day") and _avg_score(r) is not None:
+            if r.get("timestamp", "") >= latest_iv.get(r["interview_day"], {}).get("timestamp", ""):
+                latest_iv[r["interview_day"]] = r
+    cand = [(_avg_score(r), day) for day, r in latest_iv.items() if day in prog["checked_days"] and day in units]
+    if cand:
+        avg, day = min(cand)
+        u = units[day]
+        review.append({"kind": "interview", "id": u["id"], "icon": u.get("icon", ""), "title": f"Day {day} · {u.get('title', '')}",
+                       "reason": f"上次实战模拟平均 {avg} 分，打卡单元里最低", "url": f"/interview#{u['id']}"})
+
+    # 进度小结
+    week_ago = (today - datetime.timedelta(days=6)).isoformat()
+    scored = [a for a in (_avg_score(r) for r in records[-10:]) if a is not None]
+    return {
+        "today": today.isoformat(),
+        "progress": prog,
+        "unit": {"day": cur["day"], "id": cur["id"], "title": cur.get("title", ""), "subtitle": cur.get("subtitle", ""),
+                 "icon": cur.get("icon", ""), "tasks_cn": cur.get("tasks_cn", [])} if cur else None,
+        "review": review,
+        "stats": {
+            "streak": streak,
+            "checked": len(prog["checked_days"]),
+            "week_sessions": sum(1 for r in records if r.get("timestamp", "")[:10] >= week_ago),
+            "recent_avg": round(sum(scored) / len(scored), 1) if scored else None,
+            "recent_n": len(scored),
+        },
+    }
+
+
+def home_page() -> str:
+    fp = APP_DIR / "home.html"
+    return fp.read_text(encoding="utf-8") if fp.exists() else "<h1>home.html 缺失</h1>"
+
+
 def interview_page() -> str:
     fp = APP_DIR / "interview.html"
     return fp.read_text(encoding="utf-8") if fp.exists() else "<h1>interview.html 缺失</h1>"
@@ -3224,7 +3304,10 @@ class CoachRequestHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         url = urllib.parse.urlparse(self.path)
         path = url.path
-        if path == "/" or path.startswith("/index"):
+        if path == "/" or path.startswith("/index") or path.startswith("/home"):
+            self._send_html(home_page())
+            return
+        if path.startswith("/practice"):
             body = HTML_PAGE.encode("utf-8")
             try:
                 self.send_response(200)
@@ -3248,6 +3331,12 @@ class CoachRequestHandler(http.server.BaseHTTPRequestHandler):
             self._send_html(scenes_page())
         elif path.startswith("/interview"):
             self._send_html(interview_page())
+        elif path.startswith("/api/home"):
+            try:
+                self._send_json(home_payload())
+            except Exception as e:
+                log_error("GET /api/home", str(e))
+                self._send_json({"error": str(e)}, status=500)
         elif path.startswith("/api/interview"):
             try:
                 self._send_json({"units": load_interview_units(), "progress": interview_progress(),

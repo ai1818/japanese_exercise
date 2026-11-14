@@ -167,7 +167,7 @@ def run_sync() -> int:
     changed = 0
 
     # 1. 应用代码与前端页面双向同步
-    for fname in ("jp_coach.py", "bank.html", "scenes.html", "interview.html", "progress.html", "manage_life_scenes.py", "sync_onedrive.py", "check_updates.py", "pregen_tts.py", "README.md", ".gitignore", "local_profile.json"):
+    for fname in ("jp_coach.py", "bank.html", "scenes.html", "interview.html", "home.html", "progress.html", "manage_life_scenes.py", "sync_onedrive.py", "check_updates.py", "pregen_tts.py", "README.md", ".gitignore", "local_profile.json"):
         changed += sync_two_way(LOCAL_APP_DIR / fname, ONEDRIVE_APP_DIR / fname, append_only=False)
 
     # 2. 单向拉取外部源数据（OneDrive -> 本地 data/）
