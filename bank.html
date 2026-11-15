@@ -574,5 +574,22 @@ async function regenStale() {
 async function generateCompany(id) { const c = coObj(); askClaude(`${c ? c.name : COMPANY} 公司版 ${qcn(id)}`); }
 async function generateCompanyAll() { const c = coObj(); if (c) askClaude(`${c.name} 公司版（${(BANK.company_qids || []).join('、')}）`); }
 </script>
+<script>
+// 记住朗读语速：所有页面共用一个设置（localStorage，按浏览器/设备分别保存）
+(() => {
+  const s = document.getElementById('speed') || document.getElementById('speedSelect');
+  if (!s) return;
+  const K = 'jp_tts_rate';
+  try {
+    const v = parseFloat(localStorage.getItem(K));
+    if (!isNaN(v)) {  // 各页选项不完全一样，取最接近的一档
+      let best = s.options[0];
+      for (const o of s.options) if (Math.abs(parseFloat(o.value) - v) < Math.abs(parseFloat(best.value) - v)) best = o;
+      s.value = best.value;
+    }
+  } catch (e) {}
+  s.addEventListener('change', () => { try { localStorage.setItem(K, s.value); } catch (e) {} });
+})();
+</script>
 </body>
 </html>
