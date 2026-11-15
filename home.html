@@ -53,6 +53,11 @@
   .more a:hover { border-color: var(--accent); }
   .more .d { font-size: 0.74rem; color: var(--muted); }
   .err { color: var(--danger); }
+  .iss { padding: 6px 0; border-bottom: 1px dashed var(--border); font-size: 0.9rem; }
+  .iss:last-of-type { border-bottom: none; }
+  .bad { color: #fca5a5; text-decoration: line-through; text-decoration-color: #f8717188; }
+  .good { color: #86efac; font-weight: 600; }
+  .src { font-size: 0.7rem; color: var(--muted); border: 1px solid var(--border); border-radius: 99px; padding: 0 6px; margin-left: 4px; }
 </style>
 </head>
 <body>
@@ -105,8 +110,22 @@ function todayCard(d) {
   </div>`;
 }
 
+function issuesCard(d) {
+  const L = d.last_issues;
+  if (!L || !L.date) return '';
+  if (!L.items.length) return `<h2>🔁 上次练习（${esc(L.date)}）的问题</h2><div class="card sub">那天 ${L.sessions} 次练习没有被指出问题 👍</div>`;
+  return `<h2>🔁 上次练习（${esc(L.date)}，${L.sessions} 次）被指出的问题：开口前先看一眼</h2>
+    <div class="card">
+      ${L.tags.length ? `<div class="sub" style="margin-bottom:8px">问题类型：${L.tags.map(t => `${esc(t.label)} ×${t.n}`).join('　')}</div>` : ''}
+      ${L.items.map(it => `<div class="iss">
+        <div><span class="bad">${esc(it.original)}</span> → <span class="good">${esc(it.fixed)}</span> <span class="src">${esc(it.src)}</span></div>
+        ${it.reason ? `<div class="sub">${esc(it.reason)}</div>` : ''}</div>`).join('')}
+      ${L.more ? `<div class="sub">还有 ${L.more} 条，见 <a href="/progress" style="color:var(--accent)">进步页</a></div>` : ''}
+    </div>`;
+}
+
 function reviewCards(d) {
-  if (!d.review.length) return '<div class="card sub">还没有可推荐的复习内容。</div>';
+  if (!d.review.length) return '<div class="card sub">还没有可以复习的内容：练过、打过卡的单元和场景会出现在这里。</div>';
   return `<div class="row">${d.review.map(r => `<a class="rv" href="${esc(r.url)}"><div class="card">
       <div class="sub">${r.kind === 'scene' ? '🗣 生活场景' : '🎯 面试单元'} · ${esc(r.reason)}</div>
       <div class="t">${esc(r.icon)} ${esc(r.title)}</div></div></a>`).join('')}</div>`;
@@ -130,6 +149,7 @@ async function load() {
   document.getElementById('date').textContent = d.today;
   document.getElementById('main').innerHTML = `
     ${todayCard(d)}
+    ${issuesCard(d)}
     <h2>📌 推荐复习</h2>${reviewCards(d)}
     <h2>📈 进度</h2>${statsRow(d)}
     <h2>🧰 其他练习</h2>

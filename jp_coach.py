@@ -3180,14 +3180,15 @@ def home_payload() -> dict:
     for r in records:
         if r.get("scenario") == "scene" and r.get("scene_id"):
             last_scene[r["scene_id"]] = max(last_scene.get(r["scene_id"], ""), r.get("timestamp", ""))
-    scenes = [sc for sc in load_scenes() if sc.get("status") != "archived"]
-    scenes.sort(key=lambda sc: last_scene.get(sc["id"], ""))
+    # 只从「练过的」场景里挑（复习不推没练过的新内容）；今天练过的不算
+    scenes = [sc for sc in load_scenes() if sc.get("id") in last_scene and last_scene[sc["id"]][:10] < today.isoformat()]
+    scenes.sort(key=lambda sc: last_scene[sc["id"]])
     review = []
     if scenes:
         sc = scenes[0]
-        last = last_scene.get(sc["id"], "")
+        last = last_scene[sc["id"]]
         review.append({"kind": "scene", "id": sc["id"], "icon": sc.get("icon", ""), "title": sc.get("title", ""),
-                       "reason": f"最久没练（上次 {last[:10]}）" if last else "还没练过", "url": f"/scenes#{sc['id']}"})
+                       "reason": f"练过的场景里最久没碰（上次 {last[:10]}）", "url": f"/scenes#{sc['id']}"})
 
     # 复习推荐 2：打过卡的面试单元里，最近一次实战模拟分数最低的
     latest_iv = {}
@@ -3202,6 +3203,29 @@ def home_payload() -> dict:
         review.append({"kind": "interview", "id": u["id"], "icon": u.get("icon", ""), "title": f"Day {day} · {u.get('title', '')}",
                        "reason": f"上次实战模拟平均 {avg} 分，打卡单元里最低", "url": f"/interview#{u['id']}"})
 
+    # 上一个练习日（今天之前最近有记录的一天）里被指出的问题
+    def _strip(t):
+        return re.sub(r"^[\s❌✅💡]+", "", str(t or "")).strip()
+    prev_day = max((r.get("timestamp", "")[:10] for r in records if r.get("timestamp", "")[:10] < today.isoformat()), default="")
+    prev = [r for r in records if r.get("timestamp", "")[:10] == prev_day]
+    order = {"interview_unit": 0, "scene": 1}
+    prev.sort(key=lambda r: order.get(r.get("scenario"), 2))
+    issues, seen_orig, tags = [], set(), {}
+    for r in prev:
+        src = (f"面试 Day {r.get('interview_day')}" if r.get("scenario") == "interview_unit"
+               else "生活场景" if r.get("scenario") == "scene" else "自由对练")
+        for e in r.get("error_breakdown") or []:
+            orig, fixed = _strip(e.get("original_part")), _strip(e.get("fixed_part"))
+            if not orig or orig in seen_orig:
+                continue
+            seen_orig.add(orig)
+            issues.append({"src": src, "original": orig, "fixed": fixed, "reason": _strip(e.get("reason_cn"))})
+        for t in r.get("problem_tags") or []:
+            if t in PROBLEM_TAGS:
+                tags[t] = tags.get(t, 0) + 1
+    last_issues = {"date": prev_day, "sessions": len(prev), "items": issues[:8], "more": max(len(issues) - 8, 0),
+                   "tags": [{"label": PROBLEM_TAGS[k], "n": n} for k, n in sorted(tags.items(), key=lambda x: -x[1])]}
+
     # 进度小结
     week_ago = (today - datetime.timedelta(days=6)).isoformat()
     scored = [a for a in (_avg_score(r) for r in records[-10:]) if a is not None]
@@ -3211,6 +3235,7 @@ def home_payload() -> dict:
         "unit": {"day": cur["day"], "id": cur["id"], "title": cur.get("title", ""), "subtitle": cur.get("subtitle", ""),
                  "icon": cur.get("icon", ""), "tasks_cn": cur.get("tasks_cn", [])} if cur else None,
         "review": review,
+        "last_issues": last_issues,
         "stats": {
             "streak": streak,
             "checked": len(prog["checked_days"]),
